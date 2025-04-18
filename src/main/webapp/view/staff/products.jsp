@@ -1,7 +1,7 @@
 <%@ page contentType="text/html" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
-<%@ include file="admin-template.jsp" %>
+<%@ include file="dashboard-template.jsp" %>
 
 <!-- Set page title -->
 <script>
@@ -26,6 +26,9 @@
                     </c:when>
                     <c:when test="${param.success == 'deleted'}">
                         <p>Product was successfully deleted.</p>
+                    </c:when>
+                    <c:when test="${param.success == 'restocked'}">
+                        <p>Product was successfully restocked.</p>
                     </c:when>
                     <c:otherwise>
                         <p>Operation completed successfully.</p>
@@ -160,6 +163,10 @@
                                     </span>
                                 </c:otherwise>
                             </c:choose>
+                            <button onclick="openRestockModal(${product.productId}, '${product.name}', ${product.quantity})" 
+                                    class="ml-2 text-indigo-600 hover:text-indigo-900 transition-colors text-xs">
+                                <i class="fas fa-plus-circle"></i> Restock
+                            </button>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-2">
@@ -227,7 +234,49 @@
     </div>
 </div>
 
-<!-- JavaScript for Delete Confirmation -->
+<!-- Restock Modal -->
+<div id="restockModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="modal-overlay absolute inset-0 bg-black opacity-50"></div>
+    <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
+        <div class="modal-content py-4 text-left px-6">
+            <div class="flex justify-between items-center pb-3">
+                <p class="text-xl font-bold text-blue-500">Restock Product</p>
+                <button id="closeRestockModal" class="modal-close cursor-pointer z-50">
+                    <i class="fas fa-times text-gray-500 hover:text-gray-800"></i>
+                </button>
+            </div>
+            <form action="${pageContext.request.contextPath}/product/restock" method="POST" id="restockForm">
+                <input type="hidden" id="restockProductId" name="productId" value="">
+                
+                <p class="mb-4">Restock product: <span id="restockProductName" class="font-semibold"></span></p>
+                
+                <div class="mb-4">
+                    <label for="currentStock" class="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+                    <input type="number" id="currentStock" class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm text-gray-500 sm:text-sm" readonly>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="addStock" class="block text-sm font-medium text-gray-700 mb-1">Add Stock <span class="text-red-500">*</span></label>
+                    <input type="number" id="addStock" name="addStock" min="1" value="1" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="newStock" class="block text-sm font-medium text-gray-700 mb-1">New Stock</label>
+                    <input type="number" id="newStock" name="newStock" class="appearance-none block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm text-gray-700 font-semibold sm:text-sm" readonly>
+                </div>
+                
+                <div class="flex justify-end pt-2">
+                    <button type="button" id="cancelRestock" class="px-4 py-2 bg-gray-300 text-gray-800 rounded mr-2 hover:bg-gray-400 transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-save mr-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Delete Confirmation and Restock -->
 <script>
     function confirmDelete(productId, productName) {
         const modal = document.getElementById('deleteModal');
@@ -240,6 +289,30 @@
         modal.classList.remove('hidden');
     }
     
+    function openRestockModal(productId, productName, currentQuantity) {
+        const modal = document.getElementById('restockModal');
+        const productNameSpan = document.getElementById('restockProductName');
+        const productIdInput = document.getElementById('restockProductId');
+        const currentStockInput = document.getElementById('currentStock');
+        const addStockInput = document.getElementById('addStock');
+        const newStockInput = document.getElementById('newStock');
+        
+        productNameSpan.textContent = productName;
+        productIdInput.value = productId;
+        currentStockInput.value = currentQuantity;
+        addStockInput.value = 1;
+        newStockInput.value = currentQuantity + 1;
+        
+        // Update new stock when add stock changes
+        addStockInput.addEventListener('input', function() {
+            const addValue = parseInt(this.value) || 0;
+            newStockInput.value = currentQuantity + addValue;
+        });
+        
+        modal.classList.remove('hidden');
+    }
+    
+    // Modal close handlers
     document.getElementById('closeModal').addEventListener('click', function() {
         document.getElementById('deleteModal').classList.add('hidden');
     });
@@ -248,17 +321,51 @@
         document.getElementById('deleteModal').classList.add('hidden');
     });
     
-    // Close modal when clicking outside
+    document.getElementById('closeRestockModal').addEventListener('click', function() {
+        document.getElementById('restockModal').classList.add('hidden');
+    });
+    
+    document.getElementById('cancelRestock').addEventListener('click', function() {
+        document.getElementById('restockModal').classList.add('hidden');
+    });
+    
+    // Close modals when clicking outside
     document.addEventListener('click', function(event) {
-        const modal = document.getElementById('deleteModal');
-        const modalContent = document.querySelector('.modal-content');
+        const deleteModal = document.getElementById('deleteModal');
+        const restockModal = document.getElementById('restockModal');
+        const deleteModalContent = deleteModal.querySelector('.modal-content');
+        const restockModalContent = restockModal.querySelector('.modal-content');
         
-        if (modal && !modal.classList.contains('hidden') && !modalContent.contains(event.target) && !event.target.matches('[onclick^="confirmDelete"]')) {
-            modal.classList.add('hidden');
+        if (!deleteModal.classList.contains('hidden') && 
+            !deleteModalContent.contains(event.target) && 
+            !event.target.matches('[onclick^="confirmDelete"]')) {
+            deleteModal.classList.add('hidden');
         }
+        
+        if (!restockModal.classList.contains('hidden') && 
+            !restockModalContent.contains(event.target) && 
+            !event.target.matches('[onclick^="openRestockModal"]')) {
+            restockModal.classList.add('hidden');
+        }
+    });
+    
+    // Ensure form actions work
+    document.addEventListener('DOMContentLoaded', function() {
+        // Create restock handler if controller endpoint doesn't exist
+        const restockForm = document.getElementById('restockForm');
+        restockForm.addEventListener('submit', function(e) {
+            // If the restock endpoint doesn't exist, you can use the edit endpoint
+            e.preventDefault();
+            const productId = document.getElementById('restockProductId').value;
+            const newStock = document.getElementById('newStock').value;
+            
+            // Redirect to a URL that will update the stock
+            window.location.href = "${pageContext.request.contextPath}/product/edit?id=" + 
+                                   productId + "&restock=" + newStock;
+        });
     });
 </script>
 
-<jsp:include page="admin-template.jsp">
+<jsp:include page="dashboard-template.jsp">
     <jsp:param name="section" value="footer" />
 </jsp:include>

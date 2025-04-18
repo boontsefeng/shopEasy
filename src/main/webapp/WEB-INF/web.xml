@@ -1,39 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app 
-    version="6.0" 
-    xmlns="https://jakarta.ee/xml/ns/jakartaee"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee 
-                        https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
-
+<web-app version="6.0" xmlns="https://jakarta.ee/xml/ns/jakartaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee                          https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
     <display-name>ShopEasy</display-name>
-
-    <!-- Security Constraints -->
-    <security-constraint>
-        <web-resource-collection>
-            <web-resource-name>Admin Pages</web-resource-name>
-            <url-pattern>/admin/*</url-pattern>
-            <url-pattern>/dashboard</url-pattern>
-        </web-resource-collection>
-        <auth-constraint>
-            <role-name>manager</role-name>
-            <role-name>staff</role-name>
-        </auth-constraint>
-    </security-constraint>
-
-    <login-config>
-        <auth-method>FORM</auth-method>
-        <form-login-config>
-            <form-login-page>/view/login.jsp</form-login-page>
-            <form-error-page>/view/login.jsp?error=true</form-error-page>
-        </form-login-config>
-    </login-config>
-
-    <session-config>
-        <session-timeout>30</session-timeout>
-        <cookie-config>
-            <http-only>true</http-only>
-            <secure>true</secure>
-        </cookie-config>
-    </session-config>
+    <!-- Welcome Files -->
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+    <!-- Comprehensive Error Handling -->
+    <error-page>
+        <error-code>400</error-code>
+        <location>/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>401</error-code>
+        <location>/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>403</error-code>
+        <location>/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>404</error-code>
+        <location>/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/error.jsp</location>
+    </error-page>
+    <!-- Catch-all for any unhandled exceptions -->
+    <error-page>
+        <exception-type>java.lang.Throwable</exception-type>
+        <location>/error.jsp</location>
+    </error-page>
+    <!-- Context Parameters -->
+    <context-param>
+        <param-name>appName</param-name>
+        <param-value>ShopEasy</param-value>
+    </context-param>
+    <context-param>
+        <param-name>appVersion</param-name>
+        <param-value>1.0.0</param-value>
+    </context-param>
 </web-app>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setPageTitle('Dashboard');
+            
+            // Simulating dynamic content (fetching data after DOM is loaded)
+            setTimeout(() => {
+                document.getElementById('productCount').textContent = '124';
+                document.getElementById('orderCount').textContent = '56';
+                document.getElementById('customerCount').textContent = '243';
+                document.getElementById('totalRevenue').textContent = '$12,456';
+            }, 500);
+            
+            // Simulating user role
+            const userRole = 'manager';  // Change to 'staff' for testing restricted views
+            handleRoleBasedContent(userRole);
+        });
+
+        function handleRoleBasedContent(role) {
+            const customerLink = document.getElementById('customerLink');
+            const addStaffLink = document.getElementById('addStaffLink');
+            const manageKeysLink = document.getElementById('manageKeysLink');
+            
+            if (role === 'manager') {
+                customerLink.classList.remove('hidden');
+                addStaffLink.classList.remove('hidden');
+                manageKeysLink.classList.remove('hidden');
+            } else {
+                customerLink.classList.add('hidden');
+                addStaffLink.classList.add('hidden');
+                manageKeysLink.classList.add('hidden');
+            }
+        }
+    </script>
+    <!-- Include Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+
+    <!-- Dashboard Content -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Dashboard Card 1 (Products) -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-4 bg-blue-500 text-white flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Products</h2>
+                <i class="fas fa-box text-2xl"></i>
+            </div>
+            <div class="p-4 flex flex-col items-center">
+                <div class="text-3xl font-bold text-gray-700 mb-2" id="productCount">--</div>
+                <div class="text-sm text-gray-500">Total Products</div>
+                <a href="#" class="mt-4 text-blue-500 hover:text-blue-700 transition">
+                    <i class="fas fa-arrow-right mr-1"></i> View All
+                </a>
+            </div>
+        </div>
+
+        <!-- Dashboard Card 2 (Orders) -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-4 bg-green-500 text-white flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Orders</h2>
+                <i class="fas fa-shopping-cart text-2xl"></i>
+            </div>
+            <div class="p-4 flex flex-col items-center">
+                <div class="text-3xl font-bold text-gray-700 mb-2" id="orderCount">--</div>
+                <div class="text-sm text-gray-500">Total Orders</div>
+                <a href="#" class="mt-4 text-green-500 hover:text-green-700 transition">
+                    <i class="fas fa-arrow-right mr-1"></i> View All
+                </a>
+            </div>
+        </div>
+
+        <!-- Dashboard Card 3 (Customers) -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-4 bg-purple-500 text-white flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Customers</h2>
+                <i class="fas fa-users text-2xl"></i>
+            </div>
+            <div class="p-4 flex flex-col items-center">
+                <div class="text-3xl font-bold text-gray-700 mb-2" id="customerCount">--</div>
+                <div class="text-sm text-gray-500">Total Customers</div>
+                <a href="#" id="customerLink" class="mt-4 text-purple-500 hover:text-purple-700 transition hidden">
+                    <i class="fas fa-arrow-right mr-1"></i> View All
+                </a>
+                <span id="restrictedCustomerLink" class="mt-4 text-gray-400 hidden">
+                    <i class="fas fa-lock mr-1"></i> Restricted
+                </span>
+            </div>
+        </div>
+
+        <!-- Dashboard Card 4 (Revenue) -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-4 bg-yellow-500 text-white flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Revenue</h2>
+                <i class="fas fa-dollar-sign text-2xl"></i>
+            </div>
+            <div class="p-4 flex flex-col items-center">
+                <div class="text-3xl font-bold text-gray-700 mb-2" id="totalRevenue">$--</div>
+                <div class="text-sm text-gray-500">Total Revenue</div>
+                <a href="#" class="mt-4 text-yellow-500 hover:text-yellow-700 transition">
+                    <i class="fas fa-arrow-right mr-1"></i> View Reports
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+        <div class="p-4 bg-indigo-500 text-white">
+            <h2 class="text-lg font-semibold">Quick Actions</h2>
+        </div>
+        <div class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="#" class="bg-blue-100 hover:bg-blue-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
+                <i class="fas fa-plus-circle text-blue-500 text-2xl mb-2"></i>
+                <div class="text-sm font-medium text-gray-700">Add Product</div>
+            </a>
+
+            <a href="#" class="bg-green-100 hover:bg-green-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
+                <i class="fas fa-truck text-green-500 text-2xl mb-2"></i>
+                <div class="text-sm font-medium text-gray-700">View Orders</div>
+            </a>
+
+            <a href="#" id="addStaffLink" class="bg-purple-100 hover:bg-purple-200 p-4 rounded-lg text-center transition-all transform hover:scale-105 hidden">
+                <i class="fas fa-user-plus text-purple-500 text-2xl mb-2"></i>
+                <div class="text-sm font-medium text-gray-700">Add Staff</div>
+            </a>
+
+            <a href="#" id="manageKeysLink" class="bg-yellow-100 hover:bg-yellow-200 p-4 rounded-lg text-center transition-all transform hover:scale-105 hidden">
+                <i class="fas fa-key text-yellow-500 text-2xl mb-2"></i>
+                <div class="text-sm font-medium text-gray-700">Manage Keys</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Activities Section -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-4 bg-indigo-500 text-white flex justify-between items-center">
+            <h2 class="text-lg font-semibold">Recent Activities</h2>
+            <span class="text-xs bg-white text-indigo-500 py-1 px-2 rounded-full">Last 7 days</span>
+        </div>
+        <div class="p-4">
+            <div class="space-y-4">
+                <div class="flex items-center py-2 border-b border-gray-100">
+                    <div class="bg-blue-100 p-2 rounded mr-3">
+                        <i class="fas fa-box text-blue-500"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">Product "Sample Product" was added</div>
+                        <div class="text-xs text-gray-500">Today, 10:30 AM</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center py-2 border-b border-gray-100">
+                    <div class="bg-green-100 p-2 rounded mr-3">
+                        <i class="fas fa-shopping-cart text-green-500"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">New order #12345 was received</div>
+                        <div class="text-xs text-gray-500">Yesterday, 3:45 PM</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center py-2 border-b border-gray-100">
+                    <div class="bg-yellow-100 p-2 rounded mr-3">
+                        <i class="fas fa-dollar-sign text-yellow-500"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">Payment received for order #12344</div>
+                        <div class="text-xs text-gray-500">2 days ago</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center py-2">
+                    <div class="bg-purple-100 p-2 rounded mr-3">
+                        <i class="fas fa-user text-purple-500"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">New customer "John Doe" registered</div>
+                        <div class="text-xs text-gray-500">3 days ago</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center">
+                <button class="text-indigo-500 hover:text-indigo-700 text-sm font-medium focus:outline-none transition">
+                    View All Activities
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

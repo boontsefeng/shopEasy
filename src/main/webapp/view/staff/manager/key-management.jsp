@@ -1,7 +1,7 @@
 <%@ page contentType="text/html" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
-<jsp:include page="admin-template.jsp">
+<jsp:include page="../dashboard-template.jsp">
     <jsp:param name="section" value="header" />
 </jsp:include>
 
@@ -143,8 +143,7 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <code class="text-xs font-mono text-indigo-600">${key.keyValue}</code>
-                                <button onclick="copyKey('${key.keyValue}')" class="text-gray-500 hover:text-gray-700 ml-2">
-                                    <i class="fas fa-copy"></i>
+                                <button onclick="copyKey('${key.keyValue}')" class="text-gray-500 hover:text-gray-700 ml-2 fas fa-copy">
                                 </button>
                             </div>
                         </td>
@@ -157,8 +156,7 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${key.createdAt}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${key.expiresAt}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="#" onclick="confirmDelete(${key.keyId}, '${key.keyValue}')" class="text-red-600 hover:text-red-900 transition-colors" title="Delete">
-                                <i class="fas fa-trash"></i>
+                            <a href="#" onclick="confirmDelete(${key.keyId}, '${key.keyValue}')" class="text-red-600 hover:text-red-900 transition-colors fas fa-trash" title="Delete">
                             </a>
                         </td>
                     </tr>
@@ -192,60 +190,63 @@
 
 <!-- JavaScript for Delete Confirmation and Copy Key -->
 <script>
-    function confirmDelete(keyId, keyValue) {
-        const modal = document.getElementById('deleteModal');
-        const keyValueSpan = document.getElementById('keyValue');
-        const confirmBtn = document.getElementById('confirmDeleteBtn');
-        
-        keyValueSpan.textContent = keyValue;
-        confirmBtn.href = "${pageContext.request.contextPath}/manager/keys/delete?id=" + keyId;
-        
-        modal.classList.remove('hidden');
-    }
+function confirmDelete(keyId, keyValue) {
+    const modal = document.getElementById('deleteModal');
+    const keyValueSpan = document.getElementById('keyValue');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
     
-    document.getElementById('closeModal').addEventListener('click', function() {
-        document.getElementById('deleteModal').classList.add('hidden');
-    });
+    // Display key value in modal and set delete URL
+    keyValueSpan.textContent = keyValue;
+    confirmBtn.href = "${pageContext.request.contextPath}/manager/keys/delete?id=" + keyId;
     
-    document.getElementById('cancelDelete').addEventListener('click', function() {
-        document.getElementById('deleteModal').classList.add('hidden');
-    });
-    
-    // Copy key to clipboard
-    function copyKey(key) {
-        navigator.clipboard.writeText(key)
-            .then(() => {
-                // Show a temporary success message
-                const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg animate__animated animate__fadeIn';
-                toast.innerHTML = '<i class="fas fa-check mr-2"></i> Key copied to clipboard';
-                document.body.appendChild(toast);
-                
-                // Remove after 3 seconds
+    // Show the delete confirmation modal
+    modal.classList.remove('hidden');
+}
+
+// Close modal event listeners
+document.getElementById('closeModal').addEventListener('click', function() {
+    document.getElementById('deleteModal').classList.add('hidden');
+});
+
+document.getElementById('cancelDelete').addEventListener('click', function() {
+    document.getElementById('deleteModal').classList.add('hidden');
+});
+
+// Copy key to clipboard function
+function copyKey(key) {
+    navigator.clipboard.writeText(key)
+        .then(() => {
+            // Create and display a temporary success toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg animate__animated animate__fadeIn';
+            toast.innerHTML = '<i class="fas fa-check mr-2"></i> Key copied to clipboard';
+            document.body.appendChild(toast);
+            
+            // Remove toast after 3 seconds
+            setTimeout(() => {
+                toast.className += ' animate__fadeOut';
                 setTimeout(() => {
-                    toast.className += ' animate__fadeOut';
-                    setTimeout(() => {
-                        document.body.removeChild(toast);
-                    }, 1000);
-                }, 3000);
-            })
-            .catch(err => {
-                console.error('Failed to copy: ', err);
-                alert('Failed to copy key to clipboard');
-            });
-    }
+                    document.body.removeChild(toast);
+                }, 1000);
+            }, 3000);
+        })
+        .catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy key to clipboard');
+        });
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('deleteModal');
+    const modalContent = document.querySelector('.modal-content');
     
-    // Close modal when clicking outside
-    document.addEventListener('click', function(event) {
-        const modal = document.getElementById('deleteModal');
-        const modalContent = document.querySelector('.modal-content');
-        
-        if (modal && !modal.classList.contains('hidden') && !modalContent.contains(event.target) && !event.target.matches('[onclick^="confirmDelete"]')) {
-            modal.classList.add('hidden');
-        }
-    });
+    // Check if modal is open and click is outside modal
+    if (modal && !modal.classList.contains('hidden') && 
+        !modalContent.contains(event.target) && 
+        !event.target.matches('[onclick^="confirmDelete"]')) {
+        modal.classList.add('hidden');
+    }
+});
 </script>
 
-<jsp:include page="admin-template.jsp">
-    <jsp:param name="section" value="footer" />
-</jsp:include>
