@@ -1,6 +1,6 @@
 <%@ page contentType="text/html" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
-<%@ include file="admin-template.jsp" %>
+<%@ include file="dashboard-template.jsp" %>
 
 <!-- Set page title -->
 <script>
@@ -8,7 +8,6 @@
         setPageTitle('Dashboard');
     });
 </script>
-
 <!-- Dashboard Content -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <!-- Dashboard Card 1 -->
@@ -107,15 +106,6 @@
             </a>
         </c:if>
         <c:if test="${userRole != 'manager'}">
-            <div class="bg-gray-100 p-4 rounded-lg text-center opacity-60">
-                <i class="fas fa-user-plus text-gray-500 text-2xl mb-2"></i>
-                <div class="text-sm font-medium text-gray-700">Add Staff</div>
-            </div>
-            
-            <div class="bg-gray-100 p-4 rounded-lg text-center opacity-60">
-                <i class="fas fa-key text-gray-500 text-2xl mb-2"></i>
-                <div class="text-sm font-medium text-gray-700">Manage Keys</div>
-            </div>
         </c:if>
     </div>
 </div>
@@ -190,7 +180,3 @@
         }, 500);
     });
 </script>
-
-<jsp:include page="admin-template.jsp">
-    <jsp:param name="section" value="footer" />
-</jsp:include>
