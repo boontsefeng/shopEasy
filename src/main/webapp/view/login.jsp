@@ -56,12 +56,25 @@
                 </div>
             <% } %>
             
+    
             <% if (request.getAttribute("success") != null) { %>
-                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded animate__animated animate__fadeIn" role="alert">
-                    <p class="font-bold">Success</p>
-                    <p><%= request.getAttribute("success") %></p>
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded animate__animated animate__bounceIn" role="alert">
+                <div class="flex items-center">
+                    <div class="py-1">
+                        <svg class="animate__animated animate__swing animate__delay-1s animate__infinite" 
+                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="font-bold">Success!</p>
+                        <p><%= request.getAttribute("success") %></p>
+                    </div>
                 </div>
-            <% } %>
+            </div>
+        <% } %>       
             
             <form class="mt-8 space-y-6" action="login" method="POST">
                 <div class="rounded-md shadow-sm -space-y-px">
@@ -103,7 +116,8 @@
             </form>
         </div>
     </div>
-    
+ 
+            
     <!-- Add some animation when page loads -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {

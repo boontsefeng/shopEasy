@@ -56,7 +56,7 @@
                 </div>
             <% } %>
             
-            <form class="mt-8 space-y-6" action="register" method="POST" onsubmit="return validateForm()">
+            <form class="mt-8 space-y-6" action="${pageContext.request.contextPath}/register" method="POST" onsubmit="return validateForm()">
                 <div class="rounded-md shadow-sm -space-y-px">
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
