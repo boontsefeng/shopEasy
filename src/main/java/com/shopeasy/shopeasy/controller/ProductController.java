@@ -20,12 +20,16 @@ import java.util.UUID;
 
 /**
  * Controller for product management
+ * Simplified to use a single JSP for all product operations
  */
-@WebServlet(urlPatterns = {"/products", "/product/add", "/product/edit", "/product/delete", "/product/search"})
+@WebServlet(urlPatterns = {"/products", "/product/add", "/product/edit", "/product/delete", "/product/search", "/product/restock"})
 @MultipartConfig
 public class ProductController extends HttpServlet {
     private ProductDAO productDAO;
-    private static final String UPLOAD_DIR = "product-images";
+    
+    // Updated path to store in assets directory
+    private static final String UPLOAD_DIR = "view/assets/product-images";
+    private static final String PRODUCTS_JSP = "/view/staff/products.jsp";
     
     @Override
     public void init() throws ServletException {
@@ -56,16 +60,17 @@ public class ProductController extends HttpServlet {
                 // Get all products and display them
                 List<Product> products = productDAO.getAllProducts();
                 request.setAttribute("products", products);
-                request.getRequestDispatcher("/view/admin/products.jsp").forward(request, response);
+                request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
                 break;
                 
             case "/product/add":
-                // Forward to add product page
-                request.getRequestDispatcher("/view/admin/add-product.jsp").forward(request, response);
+                // Set action mode to 'add' for the JSP to show the add form
+                request.setAttribute("actionMode", "add");
+                request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
                 break;
                 
             case "/product/edit":
-                // Get product by ID and forward to edit page
+                // Get product by ID and set action mode to 'edit'
                 String productIdStr = request.getParameter("id");
                 if (productIdStr != null && !productIdStr.isEmpty()) {
                     try {
@@ -73,13 +78,36 @@ public class ProductController extends HttpServlet {
                         Product product = productDAO.getProductById(productId);
                         if (product != null) {
                             request.setAttribute("product", product);
-                            request.getRequestDispatcher("/view/admin/edit-product.jsp").forward(request, response);
+                            request.setAttribute("actionMode", "edit");
+                            request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
                             return;
                         }
                     } catch (NumberFormatException e) {
                         // Invalid product ID
                     }
                 }
+                
+                // Handle restock via GET request if needed
+                String restockParam = request.getParameter("restock");
+                if (productIdStr != null && restockParam != null) {
+                    try {
+                        int productId = Integer.parseInt(productIdStr);
+                        int newStock = Integer.parseInt(restockParam);
+                        
+                        Product product = productDAO.getProductById(productId);
+                        if (product != null) {
+                            product.setQuantity(newStock);
+                            boolean success = productDAO.updateProduct(product);
+                            if (success) {
+                                response.sendRedirect(request.getContextPath() + "/products?success=restocked");
+                                return;
+                            }
+                        }
+                    } catch (NumberFormatException e) {
+                        // Invalid parameters
+                    }
+                }
+                
                 // Redirect to products page if product not found or ID is invalid
                 response.sendRedirect(request.getContextPath() + "/products");
                 break;
@@ -95,7 +123,27 @@ public class ProductController extends HttpServlet {
                 List<Product> searchResults = productDAO.searchProducts(keyword);
                 request.setAttribute("products", searchResults);
                 request.setAttribute("searchKeyword", keyword);
-                request.getRequestDispatcher("/view/admin/products.jsp").forward(request, response);
+                request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
+                break;
+                
+            case "/product/restock":
+                // Set action mode to 'restock' to show restock form
+                productIdStr = request.getParameter("id");
+                if (productIdStr != null && !productIdStr.isEmpty()) {
+                    try {
+                        int productId = Integer.parseInt(productIdStr);
+                        Product product = productDAO.getProductById(productId);
+                        if (product != null) {
+                            request.setAttribute("product", product);
+                            request.setAttribute("actionMode", "restock");
+                            request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
+                            return;
+                        }
+                    } catch (NumberFormatException e) {
+                        // Invalid product ID
+                    }
+                }
+                response.sendRedirect(request.getContextPath() + "/products");
                 break;
                 
             default:
@@ -133,6 +181,11 @@ public class ProductController extends HttpServlet {
                 updateProduct(request, response);
                 break;
                 
+            case "/product/restock":
+                // Handle restock form submission
+                restockProduct(request, response);
+                break;
+                
             default:
                 response.sendRedirect(request.getContextPath() + "/products");
                 break;
@@ -151,11 +204,32 @@ public class ProductController extends HttpServlet {
         int quantity = 0;
         
         try {
-            price = Integer.parseInt(request.getParameter("price"));
+            // Convert price from dollars to cents if needed
+            String priceStr = request.getParameter("price");
+            if (priceStr.contains(".")) {
+                // If price is in dollars (e.g., 19.99), convert to cents
+                double priceDouble = Double.parseDouble(priceStr);
+                price = (int)(priceDouble * 100);
+            } else {
+                // If price is already in cents
+                price = Integer.parseInt(priceStr);
+            }
+            
             quantity = Integer.parseInt(request.getParameter("quantity"));
         } catch (NumberFormatException e) {
             request.setAttribute("error", "Invalid price or quantity");
-            request.getRequestDispatcher("/view/admin/add-product.jsp").forward(request, response);
+            request.setAttribute("actionMode", "add");
+            
+            // Send back the form data that was entered
+            Product formData = new Product();
+            formData.setName(name);
+            formData.setDescription(description);
+            formData.setCategory(category);
+            try { formData.setPrice(Integer.parseInt(request.getParameter("price"))); } catch (Exception ex) {}
+            try { formData.setQuantity(quantity); } catch (Exception ex) {}
+            request.setAttribute("formData", formData);
+            
+            request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
             return;
         }
         
@@ -167,7 +241,8 @@ public class ProductController extends HttpServlet {
             imagePath = processImageUpload(filePart, request);
             if (imagePath == null) {
                 request.setAttribute("error", "Failed to upload image");
-                request.getRequestDispatcher("/view/admin/add-product.jsp").forward(request, response);
+                request.setAttribute("actionMode", "add");
+                request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
                 return;
             }
         }
@@ -189,7 +264,8 @@ public class ProductController extends HttpServlet {
         } else {
             // Failed to add product
             request.setAttribute("error", "Failed to add product");
-            request.getRequestDispatcher("/view/admin/add-product.jsp").forward(request, response);
+            request.setAttribute("actionMode", "add");
+            request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
         }
     }
     
@@ -221,12 +297,23 @@ public class ProductController extends HttpServlet {
         int quantity = 0;
         
         try {
-            price = Integer.parseInt(request.getParameter("price"));
+            // Convert price from dollars to cents if needed
+            String priceStr = request.getParameter("price");
+            if (priceStr.contains(".")) {
+                // If price is in dollars (e.g., 19.99), convert to cents
+                double priceDouble = Double.parseDouble(priceStr);
+                price = (int)(priceDouble * 100);
+            } else {
+                // If price is already in cents
+                price = Integer.parseInt(priceStr);
+            }
+            
             quantity = Integer.parseInt(request.getParameter("quantity"));
         } catch (NumberFormatException e) {
             request.setAttribute("error", "Invalid price or quantity");
             request.setAttribute("product", product);
-            request.getRequestDispatcher("/view/admin/edit-product.jsp").forward(request, response);
+            request.setAttribute("actionMode", "edit");
+            request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
             return;
         }
         
@@ -259,7 +346,44 @@ public class ProductController extends HttpServlet {
             // Failed to update product
             request.setAttribute("error", "Failed to update product");
             request.setAttribute("product", product);
-            request.getRequestDispatcher("/view/admin/edit-product.jsp").forward(request, response);
+            request.setAttribute("actionMode", "edit");
+            request.getRequestDispatcher(PRODUCTS_JSP).forward(request, response);
+        }
+    }
+    
+    /**
+     * Restock a product
+     */
+    private void restockProduct(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+        int productId;
+        int addStock;
+        
+        try {
+            productId = Integer.parseInt(request.getParameter("productId"));
+            addStock = Integer.parseInt(request.getParameter("addStock"));
+        } catch (NumberFormatException e) {
+            response.sendRedirect(request.getContextPath() + "/products?error=invalid");
+            return;
+        }
+        
+        // Get existing product
+        Product product = productDAO.getProductById(productId);
+        if (product == null) {
+            response.sendRedirect(request.getContextPath() + "/products?error=notfound");
+            return;
+        }
+        
+        // Calculate new stock level
+        int newStock = product.getQuantity() + addStock;
+        product.setQuantity(newStock);
+        
+        // Update product
+        boolean success = productDAO.updateProduct(product);
+        
+        if (success) {
+            response.sendRedirect(request.getContextPath() + "/products?success=restocked");
+        } else {
+            response.sendRedirect(request.getContextPath() + "/products?error=restockfailed");
         }
     }
     
@@ -286,15 +410,29 @@ public class ProductController extends HttpServlet {
     
     /**
      * Process image upload and return the path
+     * UPDATED to fix image path issues
      */
     private String processImageUpload(Part filePart, HttpServletRequest request) {
         try {
-            // Create the upload directory if it doesn't exist
+            // Get the real application path on the server
             String applicationPath = request.getServletContext().getRealPath("");
+            
+            // Create the full path to the upload directory
             String uploadPath = applicationPath + File.separator + UPLOAD_DIR;
+            
+            // Ensure directory exists
             File uploadDir = new File(uploadPath);
             if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
+                boolean dirCreated = uploadDir.mkdirs();
+                if (!dirCreated) {
+                    System.err.println("Failed to create directory: " + uploadPath);
+                    // Try to create parent directories
+                    File assetsDir = new File(applicationPath + File.separator + "view" + File.separator + "assets");
+                    if (!assetsDir.exists()) {
+                        assetsDir.mkdirs();
+                    }
+                    uploadDir.mkdirs();
+                }
             }
             
             // Generate a unique filename
@@ -305,9 +443,13 @@ public class ProductController extends HttpServlet {
             Path filePath = Paths.get(uploadPath + File.separator + fileName);
             Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
             
-            // Return the relative path
-            return UPLOAD_DIR + "/" + fileName;
+            // Log debug information
+            System.out.println("Image saved to: " + filePath.toString());
+            
+            // Return the relative path for database storage
+            return "assets/product-images/" + fileName;
         } catch (IOException e) {
+            System.err.println("Error uploading image: " + e.getMessage());
             e.printStackTrace();
             return null;
         }

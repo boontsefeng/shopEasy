@@ -1,44 +1,55 @@
 package com.shopeasy.shopeasy.controller;
 
+import com.shopeasy.shopeasy.dao.ProductDAO;
+import com.shopeasy.shopeasy.dao.RegistrationKeyDAO;
 import com.shopeasy.shopeasy.dao.UserDAO;
+import com.shopeasy.shopeasy.model.Product;
+import com.shopeasy.shopeasy.model.RegistrationKey;
 import com.shopeasy.shopeasy.model.User;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import jakarta.servlet.annotation.*;
 import java.io.IOException;
+import java.util.List;
 
-@WebServlet(urlPatterns = {"/login", "/logout", "/dashboard", "/profile"})
+@WebServlet(urlPatterns = {"/login", "/logout", "/dashboard", "/profile", "/register"})
 public class UserController extends HttpServlet {
     private UserDAO userDAO;
+    private ProductDAO productDAO; // Added ProductDAO
 
     @Override
     public void init() throws ServletException {
         super.init();
         userDAO = new UserDAO();
+        productDAO = new ProductDAO(); // Initialize ProductDAO
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         String path = request.getServletPath();
-        
+
         switch (path) {
             case "/login":
                 handleLoginPage(request, response);
                 break;
-                
+
             case "/logout":
                 handleLogout(request, response);
                 break;
-                
+
             case "/dashboard":
                 handleDashboard(request, response);
                 break;
-                
+
             case "/profile":
                 handleProfilePage(request, response);
                 break;
-                
+
+            case "/register":
+                handleRegisterPage(request, response);
+                break;
+
             default:
                 response.sendRedirect(request.getContextPath() + "/login");
         }
@@ -58,13 +69,36 @@ public class UserController extends HttpServlet {
                 handleProfileUpdate(request, response);
                 break;
                 
+            case "/register":
+                handleRegister(request, response);
+                break;
+                
             default:
                 response.sendRedirect(request.getContextPath() + "/login");
+        }
+    }
+    
+    private void handleRegisterPage(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        HttpSession session = request.getSession(false);
+        if (session != null && session.getAttribute("user") != null) {
+            // If user is already logged in, redirect based on their role
+            redirectBasedOnRole((User) session.getAttribute("user"), request, response);
+        } else {
+            // Forward to the registration page
+            request.getRequestDispatcher("/view/register.jsp").forward(request, response);
         }
     }
 
     private void handleLoginPage(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+        // Check for registration success parameter
+        if ("true".equals(request.getParameter("registered"))) {
+            // Debug to confirm this code is running
+            System.out.println("Setting success attribute for registration");
+            request.setAttribute("success", "Your account has been successfully registered! You can now log in.");
+        }
+
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("user") != null) {
             redirectBasedOnRole((User) session.getAttribute("user"), request, response);
@@ -119,6 +153,24 @@ public class UserController extends HttpServlet {
         System.out.println("Dashboard access attempt by: " + user.getUsername() + " with role: " + user.getRole());
         
         if (isAdminRole(user.getRole())) {
+            // Get product count for dashboard
+            try {
+                // Get the total product count
+                List<Product> products = productDAO.getAllProducts();
+                int productCount = products.size();
+                
+                // Log the count for debugging
+                System.out.println("Total product count: " + productCount);
+                
+                // Set the product count as a request attribute
+                request.setAttribute("productCount", productCount);
+            } catch (Exception e) {
+                System.err.println("Error fetching product count: " + e.getMessage());
+                e.printStackTrace();
+                // Set a default value if there's an error
+                request.setAttribute("productCount", 0);
+            }
+            
             // Forward to the staff dashboard
             request.getRequestDispatcher("/view/staff/dashboard.jsp").forward(request, response);
         } else {
@@ -194,6 +246,90 @@ public class UserController extends HttpServlet {
             } else {
                 request.getRequestDispatcher("/view/customer/profile.jsp").forward(request, response);
             }
+        }
+    }
+    
+    private void handleRegister(HttpServletRequest request, HttpServletResponse response) 
+        throws ServletException, IOException {
+        // Get form data
+        String username = request.getParameter("username");
+        String password = request.getParameter("password");
+        String confirmPassword = request.getParameter("confirmPassword");
+        String name = request.getParameter("name");
+        String email = request.getParameter("email");
+        String contactNumber = request.getParameter("contactNumber");
+        String registrationKey = request.getParameter("registrationKey");
+
+        // Debug - registration attempt
+        System.out.println("Registration attempt for: " + username + " with key: " + registrationKey);
+
+        // Basic validation
+        if (!password.equals(confirmPassword)) {
+            request.setAttribute("error", "Passwords do not match");
+            request.getRequestDispatcher("/view/register.jsp").forward(request, response);
+            return;
+        }
+
+        // Check if username or email already exists
+        if (userDAO.usernameExists(username)) {
+            request.setAttribute("error", "Username already exists");
+            request.getRequestDispatcher("/view/register.jsp").forward(request, response);
+            return;
+        }
+
+        if (userDAO.emailExists(email)) {
+            request.setAttribute("error", "Email already exists");
+            request.getRequestDispatcher("/view/register.jsp").forward(request, response);
+            return;
+        }
+
+        // Determine role based on registration key
+        String role = "customer"; // Default role is customer
+        
+        if (registrationKey != null && !registrationKey.isEmpty()) {
+            // Use RegistrationKeyDAO to validate the key
+            RegistrationKeyDAO keyDAO = new RegistrationKeyDAO();
+            RegistrationKey key = keyDAO.validateKey(registrationKey);
+            
+            if (key != null) {
+                // Valid key found - use its role
+                role = key.getRole();
+                System.out.println("Valid registration key found with role: " + role);
+                
+                // Mark the key as used
+                keyDAO.markKeyAsUsed(registrationKey);
+            } else {
+                // Invalid key
+                System.out.println("Invalid registration key: " + registrationKey);
+                request.setAttribute("error", "Invalid or expired registration key");
+                request.getRequestDispatcher("/view/register.jsp").forward(request, response);
+                return;
+            }
+        }
+
+        // Create user object
+        User newUser = new User();
+        newUser.setUsername(username);
+        newUser.setPassword(password);
+        newUser.setName(name);
+        newUser.setEmail(email);
+        newUser.setContactNumber(contactNumber);
+        newUser.setRole(role);
+
+        System.out.println("Creating new user with role: " + role);
+        
+        // Add user to database
+        int userId = userDAO.createUser(newUser);
+
+        if (userId > 0) {
+            // Registration successful, redirect to login
+            System.out.println("User registered successfully with ID: " + userId);
+            response.sendRedirect(request.getContextPath() + "/login?registered=true");
+        } else {
+            // Registration failed
+            System.out.println("User registration failed");
+            request.setAttribute("error", "Registration failed. Please try again.");
+            request.getRequestDispatcher("/view/register.jsp").forward(request, response);
         }
     }
 
