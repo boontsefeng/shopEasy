@@ -179,7 +179,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-2">
-                                <a href="${pageContext.request.contextPath}/manager/staff/edit?id=${staff.userId}" class="text-indigo-600 hover:text-indigo-900 transition-colors fas fa-edit" title="Edit">
+                                <a href="#" onclick="editStaff(${staff.userId}, '${staff.username}', '${staff.name}', '${staff.email}', '${staff.contactNumber}', '${staff.role}')" class="text-indigo-600 hover:text-indigo-900 transition-colors fas fa-edit" title="Edit">
                                 </a>
                                 <a href="#" onclick="confirmDelete(${staff.userId}, '${staff.name}')" class="text-red-600 hover:text-red-900 transition-colors fas fa-trash" title="Delete">
                                 </a>
@@ -277,6 +277,65 @@
     </div>
 </div>
 
+<!-- Edit Staff Modal -->
+<div id="editModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="modal-overlay absolute inset-0 bg-black opacity-50"></div>
+    <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
+        <div class="modal-content py-4 text-left px-6">
+            <div class="flex justify-between items-center pb-3">
+                <p class="text-xl font-bold text-indigo-500">Edit Staff Member</p>
+                <button id="closeEditModal" class="modal-close cursor-pointer z-50">
+                    <i class="fas fa-times text-gray-500 hover:text-gray-800"></i>
+                </button>
+            </div>
+            
+            <form action="${pageContext.request.contextPath}/manager/staff/edit" method="POST" id="editForm">
+                <input type="hidden" id="editUserId" name="userId" value="">
+                
+                <div class="mb-4">
+                    <label for="editUsername" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" id="editUsername" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm" readonly>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="editPassword" class="block text-sm font-medium text-gray-700 mb-1">Password (leave blank to keep current)</label>
+                    <input type="password" id="editPassword" name="password" class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="editName" class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="editName" name="name" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="editEmail" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                    <input type="email" id="editEmail" name="email" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="editContact" class="block text-sm font-medium text-gray-700 mb-1">Contact <span class="text-red-500">*</span></label>
+                    <input type="text" id="editContact" name="contactNumber" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="editRole" class="block text-sm font-medium text-gray-700 mb-1">Role <span class="text-red-500">*</span></label>
+                    <select id="editRole" name="role" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="staff">Staff</option>
+                        <option value="manager">Manager</option>
+                    </select>
+                </div>
+                
+                <div class="flex justify-end pt-2">
+                    <button type="button" id="cancelEdit" class="px-4 py-2 bg-gray-300 text-gray-800 rounded mr-2 hover:bg-gray-400 transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-save mr-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- JavaScript -->
 <script>
     // Delete confirmation
@@ -302,6 +361,31 @@
         userIdInput.value = userId;
         roleSelect.value = currentRole; // Set current role as default
         
+        modal.classList.remove('hidden');
+    }
+    
+    // Edit staff function
+    function editStaff(userId, username, name, email, contact, role) {
+        const modal = document.getElementById('editModal');
+        const userIdInput = document.getElementById('editUserId');
+        const usernameInput = document.getElementById('editUsername');
+        const nameInput = document.getElementById('editName');
+        const emailInput = document.getElementById('editEmail');
+        const contactInput = document.getElementById('editContact');
+        const roleSelect = document.getElementById('editRole');
+        
+        // Set form values
+        userIdInput.value = userId;
+        usernameInput.value = username;
+        nameInput.value = name;
+        emailInput.value = email;
+        contactInput.value = contact;
+        roleSelect.value = role;
+        
+        // Clear password field (for security)
+        document.getElementById('editPassword').value = '';
+        
+        // Show modal
         modal.classList.remove('hidden');
     }
     
@@ -349,12 +433,22 @@
         document.getElementById('roleModal').classList.add('hidden');
     });
     
+    document.getElementById('closeEditModal').addEventListener('click', function() {
+        document.getElementById('editModal').classList.add('hidden');
+    });
+    
+    document.getElementById('cancelEdit').addEventListener('click', function() {
+        document.getElementById('editModal').classList.add('hidden');
+    });
+    
     // Close modals when clicking outside
     document.addEventListener('click', function(event) {
         const deleteModal = document.getElementById('deleteModal');
         const roleModal = document.getElementById('roleModal');
+        const editModal = document.getElementById('editModal');
         const deleteModalContent = deleteModal.querySelector('.modal-content');
         const roleModalContent = roleModal.querySelector('.modal-content');
+        const editModalContent = editModal.querySelector('.modal-content');
         
         if (!deleteModal.classList.contains('hidden') && 
             !deleteModalContent.contains(event.target) && 
@@ -366,6 +460,12 @@
             !roleModalContent.contains(event.target) && 
             !event.target.matches('[onclick^="changeRole"]')) {
             roleModal.classList.add('hidden');
+        }
+        
+        if (!editModal.classList.contains('hidden') && 
+            !editModalContent.contains(event.target) && 
+            !event.target.matches('[onclick^="editStaff"]')) {
+            editModal.classList.add('hidden');
         }
     });
 </script>

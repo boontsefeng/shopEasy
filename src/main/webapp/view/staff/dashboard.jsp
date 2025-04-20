@@ -84,9 +84,9 @@
         <h2 class="text-lg font-semibold">Quick Actions</h2>
     </div>
     <div class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <a href="${pageContext.request.contextPath}/product/add" class="bg-blue-100 hover:bg-blue-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
+        <a href="${pageContext.request.contextPath}/products" class="bg-blue-100 hover:bg-blue-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
             <i class="fas fa-plus-circle text-blue-500 text-2xl mb-2"></i>
-            <div class="text-sm font-medium text-gray-700">Add Product</div>
+            <div class="text-sm font-medium text-gray-700">View Products</div>
         </a>
         
         <a href="#" class="bg-green-100 hover:bg-green-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
