@@ -1,11 +1,15 @@
 package com.shopeasy.shopeasy.dao;
 
-import com.shopeasy.shopeasy.model.Product;
-import com.shopeasy.shopeasy.util.DBUtil;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.shopeasy.shopeasy.model.Product;
+import com.shopeasy.shopeasy.util.DBUtil;
 
 /**
  * Data Access Object for Product entity

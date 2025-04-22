@@ -1,5 +1,6 @@
 <%@ page contentType="text/html" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <!DOCTYPE html>
 <%@ include file="dashboard-template.jsp" %>
 
@@ -227,18 +228,41 @@
                                     </span>
                                 </c:otherwise>
                             </c:choose>
-                            <button onclick="openRestockModal(${product.productId}, '${product.name}', ${product.quantity})" 
+                            <button data-action="restock" 
+                                    data-product-id="${product.productId}" 
+                                    data-product-name="${product.name}" 
+                                    data-product-quantity="${product.quantity}"
                                     class="ml-2 text-indigo-600 hover:text-indigo-900 transition-colors text-xs">
                                 <i class="fas fa-plus-circle"></i> Restock
                             </button>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-3">
-                                <button onclick="openQuickEditModal(${product.productId}, '${product.name}', '${product.category}', ${product.price}, ${product.quantity})" class="text-blue-600 hover:text-blue-900 transition-colors fas fa-edit" title="Quick Edit">
+                                <button data-action="quick-edit"
+                                        data-product-id="${product.productId}" 
+                                        data-product-name="${product.name}" 
+                                        data-product-category="${product.category}" 
+                                        data-product-price="${product.price}" 
+                                        data-product-quantity="${product.quantity}"
+                                        class="text-blue-600 hover:text-blue-900 transition-colors fas fa-edit" 
+                                        title="Quick Edit">
                                 </button>
-                                <button onclick="openFullEditModal(${product.productId}, '${product.name}', '${product.category}', ${product.price}, ${product.quantity}, '${product.description}', '${product.imagePath}')" class="text-indigo-600 hover:text-indigo-900 transition-colors fas fa-sliders-h" title="Full Edit">
+                                <button data-action="full-edit"
+                                        data-product-id="${product.productId}" 
+                                        data-product-name="${product.name}" 
+                                        data-product-category="${product.category}" 
+                                        data-product-price="${product.price}" 
+                                        data-product-quantity="${product.quantity}"
+                                        data-product-description="${product.description}" 
+                                        data-product-image="${product.imagePath}"
+                                        class="text-indigo-600 hover:text-indigo-900 transition-colors fas fa-sliders-h" 
+                                        title="Full Edit">
                                 </button>
-                                <button onclick="confirmDelete(${product.productId}, '${product.name}')" class="text-red-600 hover:text-red-900 transition-colors fas fa-trash" title="Delete">
+                                <button data-action="delete"
+                                        data-product-id="${product.productId}" 
+                                        data-product-name="${product.name}"
+                                        class="text-red-600 hover:text-red-900 transition-colors fas fa-trash" 
+                                        title="Delete">
                                 </button>
                             </div>
                         </td>
@@ -352,14 +376,16 @@
                 <div class="mb-4">
                     <label for="editCategory" class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
                     <select id="editCategory" name="category" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                        <option value="Electronics">Electronics</option>
-                        <option value="Clothing">Clothing</option>
-                        <option value="Books">Books</option>
-                        <option value="Home & Kitchen">Home & Kitchen</option>
-                        <option value="Beauty">Beauty</option>
-                        <option value="Sports">Sports</option>
-                        <option value="Toys">Toys</option>
-                        <option value="Other">Other</option>
+                        <option value="Kitchen Appliances">Kitchen Appliances</option>
+                        <option value="Refrigerators & Freezers">Refrigerators & Freezers</option>
+                        <option value="Washing Machines">Washing Machines</option>
+                        <option value="Air Conditioners">Air Conditioners</option>
+                        <option value="Vacuum Cleaners">Vacuum Cleaners</option>
+                        <option value="Fans & Air Coolers">Fans & Air Coolers</option>
+                        <option value="Water Heaters">Water Heaters</option>
+                        <option value="Microwaves & Ovens">Microwaves & Ovens</option>
+                        <option value="Dishwashers">Dishwashers</option>
+                        <option value="Other Appliances">Other Appliances</option>
                     </select>
                 </div>
                 
@@ -409,14 +435,16 @@
                 <div class="mb-4">
                     <label for="addCategory" class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
                     <select id="addCategory" name="category" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                        <option value="Electronics">Electronics</option>
-                        <option value="Clothing">Clothing</option>
-                        <option value="Books">Books</option>
-                        <option value="Home & Kitchen">Home & Kitchen</option>
-                        <option value="Beauty">Beauty</option>
-                        <option value="Sports">Sports</option>
-                        <option value="Toys">Toys</option>
-                        <option value="Other">Other</option>
+                        <option value="Kitchen Appliances">Kitchen Appliances</option>
+                        <option value="Refrigerators & Freezers">Refrigerators & Freezers</option>
+                        <option value="Washing Machines">Washing Machines</option>
+                        <option value="Air Conditioners">Air Conditioners</option>
+                        <option value="Vacuum Cleaners">Vacuum Cleaners</option>
+                        <option value="Fans & Air Coolers">Fans & Air Coolers</option>
+                        <option value="Water Heaters">Water Heaters</option>
+                        <option value="Microwaves & Ovens">Microwaves & Ovens</option>
+                        <option value="Dishwashers">Dishwashers</option>
+                        <option value="Other Appliances">Other Appliances</option>
                     </select>
                 </div>
                 
@@ -473,14 +501,16 @@
                         <div class="mb-4">
                             <label for="fullEditCategory" class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
                             <select id="fullEditCategory" name="category" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="Electronics">Electronics</option>
-                                <option value="Clothing">Clothing</option>
-                                <option value="Books">Books</option>
-                                <option value="Home & Kitchen">Home & Kitchen</option>
-                                <option value="Beauty">Beauty</option>
-                                <option value="Sports">Sports</option>
-                                <option value="Toys">Toys</option>
-                                <option value="Other">Other</option>
+                                <option value="Kitchen Appliances">Kitchen Appliances</option>
+                                <option value="Refrigerators & Freezers">Refrigerators & Freezers</option>
+                                <option value="Washing Machines">Washing Machines</option>
+                                <option value="Air Conditioners">Air Conditioners</option>
+                                <option value="Vacuum Cleaners">Vacuum Cleaners</option>
+                                <option value="Fans & Air Coolers">Fans & Air Coolers</option>
+                                <option value="Water Heaters">Water Heaters</option>
+                                <option value="Microwaves & Ovens">Microwaves & Ovens</option>
+                                <option value="Dishwashers">Dishwashers</option>
+                                <option value="Other Appliances">Other Appliances</option>
                             </select>
                         </div>
                         
@@ -992,6 +1022,54 @@
                     modal.classList.add('hidden');
                 }
             }
+        });
+    });
+
+    // Add event listeners for product action buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        // Restock buttons
+        document.querySelectorAll('[data-action="restock"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const productId = this.getAttribute('data-product-id');
+                const productName = this.getAttribute('data-product-name');
+                const quantity = this.getAttribute('data-product-quantity');
+                openRestockModal(productId, productName, quantity);
+            });
+        });
+        
+        // Quick edit buttons
+        document.querySelectorAll('[data-action="quick-edit"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const productId = this.getAttribute('data-product-id');
+                const productName = this.getAttribute('data-product-name');
+                const category = this.getAttribute('data-product-category');
+                const price = this.getAttribute('data-product-price');
+                const quantity = this.getAttribute('data-product-quantity');
+                openQuickEditModal(productId, productName, category, price, quantity);
+            });
+        });
+        
+        // Full edit buttons
+        document.querySelectorAll('[data-action="full-edit"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const productId = this.getAttribute('data-product-id');
+                const productName = this.getAttribute('data-product-name');
+                const category = this.getAttribute('data-product-category');
+                const price = this.getAttribute('data-product-price');
+                const quantity = this.getAttribute('data-product-quantity');
+                const description = this.getAttribute('data-product-description');
+                const imagePath = this.getAttribute('data-product-image');
+                openFullEditModal(productId, productName, category, price, quantity, description, imagePath);
+            });
+        });
+        
+        // Delete buttons
+        document.querySelectorAll('[data-action="delete"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const productId = this.getAttribute('data-product-id');
+                const productName = this.getAttribute('data-product-name');
+                confirmDelete(productId, productName);
+            });
         });
     });
 </script>
