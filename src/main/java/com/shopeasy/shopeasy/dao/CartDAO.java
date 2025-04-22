@@ -44,11 +44,11 @@ public class CartDAO {
             try (ResultSet rs = checkStmt.executeQuery()) {
                 if (rs.next()) {
                     // Item exists, update quantity
-                    int cartId = rs.getInt("cart_id");
+                    int cartId = rs.getInt("cart_item_id");
                     int currentQuantity = rs.getInt("quantity");
                     int newQuantity = currentQuantity + cart.getQuantity();
                     
-                    String updateSql = "UPDATE cartitems SET quantity = ? WHERE cart_id = ?";
+                    String updateSql = "UPDATE cartitems SET quantity = ? WHERE cart_item_id = ?";
                     try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
                         updateStmt.setInt(1, newQuantity);
                         updateStmt.setInt(2, cartId);
@@ -83,7 +83,7 @@ public class CartDAO {
      * @return true if successful, false otherwise
      */
     public boolean updateCartItemQuantity(int cartId, int quantity) {
-        String sql = "UPDATE cartitems SET quantity = ? WHERE cart_id = ?";
+        String sql = "UPDATE cartitems SET quantity = ? WHERE cart_item_id = ?";
         
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, quantity);
@@ -104,7 +104,7 @@ public class CartDAO {
      * @return true if successful, false otherwise
      */
     public boolean removeFromCart(int cartId) {
-        String sql = "DELETE FROM cartitems WHERE cart_id = ?";
+        String sql = "DELETE FROM cartitems WHERE cart_item_id = ?";
         
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, cartId);
@@ -245,7 +245,7 @@ public class CartDAO {
      */
     private Cart extractCartFromResultSet(ResultSet rs) throws SQLException {
         Cart cart = new Cart();
-        cart.setCartId(rs.getInt("cart_id"));
+        cart.setCartId(rs.getInt("cart_item_id"));
         cart.setUserId(rs.getInt("user_id"));
         cart.setProductId(rs.getInt("product_id"));
         cart.setQuantity(rs.getInt("quantity"));
