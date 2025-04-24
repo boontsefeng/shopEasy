@@ -395,4 +395,21 @@ public class UserDAO {
         return null;
     }
 
+    /**
+        * Get the total count of customers
+        * @return Total number of customers
+        */
+       public int getCustomerCount() {
+           String sql = "SELECT COUNT(*) FROM users WHERE role = 'customer'";
+           try (Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+               if (rs.next()) {
+                   return rs.getInt(1);
+               }
+           } catch (SQLException e) {
+               System.err.println("Error getting customer count: " + e.getMessage());
+               e.printStackTrace();
+           }
+           return 0;
+       }
 }

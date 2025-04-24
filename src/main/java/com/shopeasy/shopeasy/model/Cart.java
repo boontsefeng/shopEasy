@@ -21,7 +21,7 @@ public class Cart implements Serializable {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "cart_id")
+    @Column(name = "cart_item_id")
     private int cartId;
     
     @Column(name = "user_id", nullable = false)

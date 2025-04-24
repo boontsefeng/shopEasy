@@ -3,6 +3,7 @@ package com.shopeasy.shopeasy.controller;
 import com.shopeasy.shopeasy.dao.ProductDAO;
 import com.shopeasy.shopeasy.dao.RegistrationKeyDAO;
 import com.shopeasy.shopeasy.dao.UserDAO;
+import com.shopeasy.shopeasy.dao.OrderDAO;
 import com.shopeasy.shopeasy.model.Product;
 import com.shopeasy.shopeasy.model.RegistrationKey;
 import com.shopeasy.shopeasy.model.User;
@@ -15,13 +16,15 @@ import java.util.List;
 @WebServlet(urlPatterns = {"/login", "/logout", "/dashboard", "/profile", "/register"})
 public class UserController extends HttpServlet {
     private UserDAO userDAO;
-    private ProductDAO productDAO; // Added ProductDAO
+    private ProductDAO productDAO;
+    private OrderDAO orderDAO;
 
     @Override
     public void init() throws ServletException {
         super.init();
         userDAO = new UserDAO();
-        productDAO = new ProductDAO(); // Initialize ProductDAO
+        productDAO = new ProductDAO();
+        orderDAO = new OrderDAO(); // Initialize OrderDAO
     }
 
     @Override
@@ -153,22 +156,40 @@ public class UserController extends HttpServlet {
         System.out.println("Dashboard access attempt by: " + user.getUsername() + " with role: " + user.getRole());
         
         if (isAdminRole(user.getRole())) {
-            // Get product count for dashboard
             try {
                 // Get the total product count
                 List<Product> products = productDAO.getAllProducts();
                 int productCount = products.size();
                 
-                // Log the count for debugging
-                System.out.println("Total product count: " + productCount);
+                // Get order count
+                int orderCount = orderDAO.getOrderCount();
                 
-                // Set the product count as a request attribute
+                // Get customer count
+                int customerCount = userDAO.getCustomerCount();
+                
+                // Get total revenue
+                double totalRevenue = orderDAO.getTotalRevenue();
+                
+                // Log the counts for debugging
+                System.out.println("Dashboard data - Products: " + productCount + 
+                                  ", Orders: " + orderCount + 
+                                  ", Customers: " + customerCount + 
+                                  ", Revenue: $" + totalRevenue);
+                
+                // Set the data as request attributes
                 request.setAttribute("productCount", productCount);
+                request.setAttribute("orderCount", orderCount);
+                request.setAttribute("customerCount", customerCount);
+                request.setAttribute("totalRevenue", String.format("$%,.2f", totalRevenue));
             } catch (Exception e) {
-                System.err.println("Error fetching product count: " + e.getMessage());
+                System.err.println("Error fetching dashboard data: " + e.getMessage());
                 e.printStackTrace();
-                // Set a default value if there's an error
+                
+                // Set default values if there's an error
                 request.setAttribute("productCount", 0);
+                request.setAttribute("orderCount", 0);
+                request.setAttribute("customerCount", 0);
+                request.setAttribute("totalRevenue", "$0.00");
             }
             
             // Forward to the staff dashboard

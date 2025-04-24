@@ -43,7 +43,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Add animate.css for animations -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+        <!-- Add Poppins Font -->
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body, html {
+            font-family: 'Poppins', sans-serif
+        }
+
+        * {
+            font-family: 'Poppins', sans-serif
+        }
+    </style>
+    <style>
+    
         .sidebar {
             transition: all 0.3s ease-in-out;
         }
