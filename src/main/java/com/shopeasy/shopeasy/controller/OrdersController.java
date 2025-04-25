@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
-@WebServlet("/orders")
+@WebServlet("/orders/*")
 public class OrdersController extends HttpServlet {
     private OrderDAO orderDAO;
     private UserDAO userDAO;
@@ -30,6 +30,152 @@ public class OrdersController extends HttpServlet {
     
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        String pathInfo = request.getPathInfo();
+        
+        // If there's a path info, it's an API request for order details
+        if (pathInfo != null && !pathInfo.equals("/")) {
+            handleApiRequest(request, response, pathInfo);
+            return;
+        }
+        
+        // Otherwise, handle the main orders page request
+        handleOrdersPageRequest(request, response);
+    }
+    
+    /**
+     * Handle API requests for order details
+     */
+    private void handleApiRequest(HttpServletRequest request, HttpServletResponse response, String pathInfo) 
+            throws ServletException, IOException {
+        
+        // Set content type for JSON response
+        response.setContentType("application/json");
+        
+        // Check authorization
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("user") == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\":\"Unauthorized access. Please log in again.\",\"success\":false}");
+            return;
+        }
+        
+        User user = (User) session.getAttribute("user");
+        String role = user.getRole().toLowerCase();
+        
+        // Only allow staff and managers to access order details
+        if (role.equals("manager") || role.equals("staff")) {
+            try {
+                // Get order ID from path
+                if (pathInfo == null || pathInfo.equals("/")) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    response.getWriter().write("{\"error\":\"Order ID is required\",\"success\":false}");
+                    return;
+                }
+                
+                // Clean up the path before parsing
+                String orderIdStr = pathInfo.substring(1).trim();
+                if (orderIdStr.isEmpty()) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    response.getWriter().write("{\"error\":\"Invalid order ID format\",\"success\":false}");
+                    return;
+                }
+                
+                int orderId = Integer.parseInt(orderIdStr);
+                
+                // Get order details
+                Order order = orderDAO.getOrderById(orderId);
+                if (order == null) {
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    response.getWriter().write("{\"error\":\"Order not found\",\"success\":false}");
+                    return;
+                }
+                
+                // Get customer info
+                User customer = userDAO.getUserById(order.getUserId());
+                if (customer == null) {
+                    // Handle missing customer data gracefully
+                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    response.getWriter().write("{\"error\":\"Customer data not found for this order\",\"success\":false}");
+                    return;
+                }
+                
+                // Get order items
+                List<OrderItem> items = orderDAO.getOrderItemsByOrderId(orderId);
+                
+                // Create JSON response manually to avoid dependency issues
+                StringBuilder jsonBuilder = new StringBuilder();
+                jsonBuilder.append("{");
+                jsonBuilder.append("\"success\":true,");
+                jsonBuilder.append("\"orderId\":").append(order.getOrderId()).append(",");
+                jsonBuilder.append("\"orderDate\":").append(order.getOrderDate().getTime()).append(",");
+                jsonBuilder.append("\"totalAmount\":").append(order.getTotalAmount()).append(",");
+                jsonBuilder.append("\"status\":\"").append(escapeJson(order.getStatus())).append("\",");
+                jsonBuilder.append("\"paymentMethod\":\"").append(escapeJson(order.getPaymentMethod())).append("\",");
+                jsonBuilder.append("\"shippingAddress\":\"").append(escapeJson(order.getShippingAddress())).append("\",");
+                
+                // Add customer info
+                jsonBuilder.append("\"customerName\":\"").append(escapeJson(customer.getName())).append("\",");
+                jsonBuilder.append("\"customerEmail\":\"").append(escapeJson(customer.getEmail())).append("\",");
+                jsonBuilder.append("\"customerPhone\":\"").append(escapeJson(customer.getContactNumber())).append("\",");
+                
+                // Add order items
+                jsonBuilder.append("\"items\":[");
+                for (int i = 0; i < items.size(); i++) {
+                    OrderItem item = items.get(i);
+                    if (i > 0) {
+                        jsonBuilder.append(",");
+                    }
+                    jsonBuilder.append("{");
+                    jsonBuilder.append("\"productId\":").append(item.getProductId()).append(",");
+                    jsonBuilder.append("\"productName\":\"").append(escapeJson(item.getProductName())).append("\",");
+                    jsonBuilder.append("\"quantity\":").append(item.getQuantity()).append(",");
+                    jsonBuilder.append("\"price\":").append(item.getPrice());
+                    jsonBuilder.append("}");
+                }
+                jsonBuilder.append("]");
+                
+                jsonBuilder.append("}");
+                
+                // Send JSON response
+                response.getWriter().write(jsonBuilder.toString());
+                
+            } catch (NumberFormatException e) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\":\"Invalid order ID format: " + e.getMessage() + "\",\"success\":false}");
+            } catch (Exception e) {
+                System.err.println("Error getting order details: " + e.getMessage());
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\":\"Internal server error: " + e.getMessage() + "\",\"success\":false}");
+            }
+        } else {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.getWriter().write("{\"error\":\"Access denied. Only staff and managers can view order details.\",\"success\":false}");
+        }
+    }
+    
+    /**
+     * Escape special characters in JSON strings
+     */
+    private String escapeJson(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("\\", "\\\\")
+                   .replace("\"", "\\\"")
+                   .replace("\b", "\\b")
+                   .replace("\f", "\\f")
+                   .replace("\n", "\\n")
+                   .replace("\r", "\\r")
+                   .replace("\t", "\\t");
+    }
+    
+    /**
+     * Handle main orders page request
+     */
+    private void handleOrdersPageRequest(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         // Check authorization
         HttpSession session = request.getSession(false);
@@ -82,7 +228,9 @@ public class OrdersController extends HttpServlet {
         // Check authorization
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("user") == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
+            response.setContentType("application/json");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized. Please log in.\"}");
             return;
         }
         
@@ -92,27 +240,42 @@ public class OrdersController extends HttpServlet {
         // Only allow staff and managers to update order status
         if (role.equals("manager") || role.equals("staff")) {
             String action = request.getParameter("action");
+            response.setContentType("application/json");
             
             if ("updateStatus".equals(action)) {
-                int orderId = Integer.parseInt(request.getParameter("orderId"));
-                String newStatus = request.getParameter("status");
-                
-                // Update order status
-                boolean success = orderDAO.updateOrderStatus(orderId, newStatus);
-                
-                // Send JSON response
-                response.setContentType("application/json");
-                if (success) {
-                    response.getWriter().write("{\"success\":true,\"message\":\"Order status updated successfully\"}");
-                } else {
-                    response.getWriter().write("{\"success\":false,\"message\":\"Failed to update order status\"}");
+                try {
+                    String orderIdParam = request.getParameter("orderId");
+                    String newStatus = request.getParameter("status");
+                    
+                    if (orderIdParam == null || newStatus == null || orderIdParam.trim().isEmpty() || newStatus.trim().isEmpty()) {
+                        response.getWriter().write("{\"success\":false,\"message\":\"Missing order ID or status\"}");
+                        return;
+                    }
+                    
+                    int orderId = Integer.parseInt(orderIdParam);
+                    
+                    // Update order status
+                    boolean success = orderDAO.updateOrderStatus(orderId, newStatus);
+                    
+                    if (success) {
+                        response.getWriter().write("{\"success\":true,\"message\":\"Order status updated successfully\"}");
+                    } else {
+                        response.getWriter().write("{\"success\":false,\"message\":\"Failed to update order status\"}");
+                    }
+                } catch (NumberFormatException e) {
+                    response.getWriter().write("{\"success\":false,\"message\":\"Invalid order ID format\"}");
+                } catch (Exception e) {
+                    System.err.println("Error updating order status: " + e.getMessage());
+                    e.printStackTrace();
+                    response.getWriter().write("{\"success\":false,\"message\":\"Server error: " + e.getMessage() + "\"}");
                 }
             } else {
                 // Forward back to orders page for other actions
                 doGet(request, response);
             }
         } else {
-            response.sendRedirect(request.getContextPath() + "/dashboard");
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\":false,\"message\":\"Access denied. Only staff and managers can update orders.\"}");
         }
     }
 }

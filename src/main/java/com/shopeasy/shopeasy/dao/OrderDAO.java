@@ -108,12 +108,18 @@ public class OrderDAO {
     }
     
     /**
-     * Update order status
+     * Update order status or delete if cancelled
      * @param orderId Order ID
      * @param status New status
      * @return true if successful, false otherwise
      */
     public boolean updateOrderStatus(int orderId, String status) {
+        // If status is cancelled, delete the order instead of updating status
+        if (status.equalsIgnoreCase("cancelled")) {
+            return deleteOrder(orderId);
+        }
+        
+        // Otherwise, update the status
         // Map the status from our app to the database enum values
         String dbStatus;
         switch(status.toLowerCase()) {
@@ -128,9 +134,6 @@ public class OrderDAO {
                 break;
             case "delivered":
                 dbStatus = "delivered";
-                break;
-            case "cancelled":  // Add support for cancelled status
-                dbStatus = "cancelled";
                 break;
             default:
                 dbStatus = "packaging";
@@ -148,6 +151,61 @@ public class OrderDAO {
             System.err.println("Error updating order status: " + e.getMessage());
             e.printStackTrace();
             return false;
+        }
+    }
+    
+    /**
+     * Delete an order and its associated order items
+     * @param orderId Order ID to delete
+     * @return true if successful, false otherwise
+     */
+    public boolean deleteOrder(int orderId) {
+        // First delete associated order items (due to foreign key constraints)
+        String deleteItemsSql = "DELETE FROM orderitems WHERE order_id = ?";
+        
+        // Then delete the order
+        String deleteOrderSql = "DELETE FROM orders WHERE order_id = ?";
+        
+        try {
+            // Start transaction
+            conn.setAutoCommit(false);
+            
+            // Delete order items
+            try (PreparedStatement stmt = conn.prepareStatement(deleteItemsSql)) {
+                stmt.setInt(1, orderId);
+                stmt.executeUpdate();
+            }
+            
+            // Delete order
+            try (PreparedStatement stmt = conn.prepareStatement(deleteOrderSql)) {
+                stmt.setInt(1, orderId);
+                int affectedRows = stmt.executeUpdate();
+                
+                // Commit transaction
+                conn.commit();
+                
+                return affectedRows > 0;
+            }
+        } catch (SQLException e) {
+            // Roll back transaction on error
+            try {
+                conn.rollback();
+            } catch (SQLException rollbackEx) {
+                System.err.println("Error rolling back transaction: " + rollbackEx.getMessage());
+                rollbackEx.printStackTrace();
+            }
+            
+            System.err.println("Error deleting order: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            // Restore auto-commit
+            try {
+                conn.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("Error restoring auto-commit: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
     
@@ -285,71 +343,76 @@ public class OrderDAO {
      * @return Order object
      * @throws SQLException if error occurs
      */
-private Order extractOrderFromResultSet(ResultSet rs) throws SQLException {
-    Order order = new Order();
-    order.setOrderId(rs.getInt("order_id"));
-    order.setUserId(rs.getInt("user_id"));
-    order.setOrderDate(new Date(rs.getTimestamp("order_date").getTime()));
-    
-    // Fix the incompatible types error - using intValue() instead of doubleValue()
-    BigDecimal totalAmount = rs.getBigDecimal("total_amount");
-    order.setTotalAmount(totalAmount.intValue());
-    
-    order.setShippingAddress(rs.getString("shipping_address"));
-    
-    // Map the database status to our app status
-    String dbStatus = rs.getString("order_status");
-    String appStatus;
-    switch(dbStatus) {
-        case "packaging":
-            appStatus = "pending";
-            break;
-        case "shipping":
-            appStatus = "processing";
-            break;
-        case "delivery":
-            appStatus = "shipped";
-            break;
-        case "delivered":
-            appStatus = "delivered";
-            break;
-        case "cancelled":
-            appStatus = "cancelled";
-            break;
-        default:
-            appStatus = "pending";
+    private Order extractOrderFromResultSet(ResultSet rs) throws SQLException {
+        Order order = new Order();
+        order.setOrderId(rs.getInt("order_id"));
+        order.setUserId(rs.getInt("user_id"));
+        order.setOrderDate(new Date(rs.getTimestamp("order_date").getTime()));
+        
+        // Fix the incompatible types error - handle null values appropriately
+        BigDecimal totalAmount = rs.getBigDecimal("total_amount");
+        if (totalAmount != null) {
+            order.setTotalAmount(totalAmount.intValue());
+        } else {
+            order.setTotalAmount(0);
+        }
+        
+        order.setShippingAddress(rs.getString("shipping_address"));
+        
+        // Map the database status to our app status
+        String dbStatus = rs.getString("order_status");
+        String appStatus;
+        switch(dbStatus) {
+            case "packaging":
+                appStatus = "pending";
+                break;
+            case "shipping":
+                appStatus = "processing";
+                break;
+            case "delivery":
+                appStatus = "shipped";
+                break;
+            case "delivered":
+                appStatus = "delivered";
+                break;
+            case "cancelled":  // Handle cancelled status
+                appStatus = "cancelled";
+                break;
+            default:
+                appStatus = "pending";
+        }
+        order.setStatus(appStatus);
+        
+        // Map the database payment method to our app payment method
+        String dbPaymentMethod = rs.getString("payment_method");
+        String appPaymentMethod;
+        switch(dbPaymentMethod) {
+            case "cash":
+                appPaymentMethod = "Cash on Delivery";
+                break;
+            case "credit":
+            case "debit":
+                appPaymentMethod = "Card on Delivery";
+                break;
+            case "e-wallet":
+                appPaymentMethod = "UPI Payment";
+                break;
+            default:
+                appPaymentMethod = "Cash on Delivery";
+        }
+        order.setPaymentMethod(appPaymentMethod);
+        
+        // Handle missing tracking_number column
+        try {
+            String trackingNumber = rs.getString("tracking_number");
+            order.setTrackingNumber(trackingNumber);
+        } catch (SQLException e) {
+            // Column doesn't exist, set tracking number to null
+            order.setTrackingNumber(null);
+        }
+        
+        return order;
     }
-    order.setStatus(appStatus);
-    
-    // Map the database payment method to our app payment method
-    String dbPaymentMethod = rs.getString("payment_method");
-    String appPaymentMethod;
-    switch(dbPaymentMethod) {
-        case "cash":
-            appPaymentMethod = "Cash on Delivery";
-            break;
-        case "credit":
-        case "debit":
-            appPaymentMethod = "Card on Delivery";
-            break;
-        case "e-wallet":
-            appPaymentMethod = "UPI Payment";
-            break;
-        default:
-            appPaymentMethod = "Cash on Delivery";
-    }
-    order.setPaymentMethod(appPaymentMethod);
-    
-    // Handle missing tracking_number column
-    try {
-        order.setTrackingNumber(rs.getString("tracking_number"));
-    } catch (SQLException e) {
-        // Column doesn't exist, set tracking number to null
-        order.setTrackingNumber(null);
-    }
-    
-    return order;
-}
     
     /**
      * Get the total count of orders
@@ -404,91 +467,91 @@ private Order extractOrderFromResultSet(ResultSet rs) throws SQLException {
     }
     
     /**
- * Get revenue data between two dates
- * @param startDate Start date
- * @param endDate End date  
- * @return Map with dates as keys and revenue as values
- */
-public Map<String, Double> getRevenueBetweenDates(Date startDate, Date endDate) {
-    Map<String, Double> revenueData = new LinkedHashMap<>(); // LinkedHashMap to maintain order
-    
-    String sql = "SELECT DATE(order_date) as date, SUM(total_amount) as revenue " +
-                "FROM orders " +
-                "WHERE order_date BETWEEN ? AND ? " +
-                "GROUP BY DATE(order_date) " +
-                "ORDER BY date";
-    
-    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-        stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
-        stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+     * Get revenue data between two dates
+     * @param startDate Start date
+     * @param endDate End date  
+     * @return Map with dates as keys and revenue as values
+     */
+    public Map<String, Double> getRevenueBetweenDates(Date startDate, Date endDate) {
+        Map<String, Double> revenueData = new LinkedHashMap<>(); // LinkedHashMap to maintain order
         
-        try (ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                String date = rs.getDate("date").toString();
-                double revenue = rs.getDouble("revenue");
-                
-                // Print for debugging
-                System.out.printf("Revenue data: %s - $%.2f%n", date, revenue);
-                
-                revenueData.put(date, revenue);
+        String sql = "SELECT DATE(order_date) as date, SUM(total_amount) as revenue " +
+                    "FROM orders " +
+                    "WHERE order_date BETWEEN ? AND ? " +
+                    "GROUP BY DATE(order_date) " +
+                    "ORDER BY date";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+            stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String date = rs.getDate("date").toString();
+                    double revenue = rs.getDouble("revenue");
+                    
+                    // Print for debugging
+                    System.out.printf("Revenue data: %s - $%.2f%n", date, revenue);
+                    
+                    revenueData.put(date, revenue);
+                }
             }
+        } catch (SQLException e) {
+            System.err.println("Error getting revenue data: " + e.getMessage());
+            e.printStackTrace();
         }
-    } catch (SQLException e) {
-        System.err.println("Error getting revenue data: " + e.getMessage());
-        e.printStackTrace();
+        
+        return revenueData;
     }
-    
-    return revenueData;
-}
 
-/**
- * Get most popular products between two dates
- * @param startDate Start date
- * @param endDate End date
- * @param limit Number of products to return
- * @return List of maps containing product data
- */
-public List<Map<String, Object>> getMostPopularProductsBetweenDates(Date startDate, Date endDate, int limit) {
-    List<Map<String, Object>> popularProducts = new ArrayList<>();
-    
-    String sql = "SELECT p.product_id, p.name, p.image_path, SUM(oi.quantity) as total_quantity, " +
-                "SUM(oi.price * oi.quantity) as total_revenue " +
-                "FROM orderitems oi " +
-                "JOIN products p ON oi.product_id = p.product_id " +
-                "JOIN orders o ON oi.order_id = o.order_id " +
-                "WHERE o.order_date BETWEEN ? AND ? " +
-                "GROUP BY p.product_id, p.name " +
-                "ORDER BY total_quantity DESC " +
-                "LIMIT ?";
-    
-    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-        stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
-        stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
-        stmt.setInt(3, limit);
+    /**
+     * Get most popular products between two dates
+     * @param startDate Start date
+     * @param endDate End date
+     * @param limit Number of products to return
+     * @return List of maps containing product data
+     */
+    public List<Map<String, Object>> getMostPopularProductsBetweenDates(Date startDate, Date endDate, int limit) {
+        List<Map<String, Object>> popularProducts = new ArrayList<>();
         
-        try (ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                Map<String, Object> product = new HashMap<>();
-                product.put("productId", rs.getInt("product_id"));
-                product.put("name", rs.getString("name"));
-                product.put("imagePath", rs.getString("image_path"));
-                product.put("totalQuantity", rs.getInt("total_quantity"));
-                product.put("totalRevenue", rs.getDouble("total_revenue"));
-                
-                // Print for debugging
-                System.out.printf("Popular product: %s - Qty: %d, Revenue: $%.2f%n", 
-                    rs.getString("name"), rs.getInt("total_quantity"), rs.getDouble("total_revenue"));
-                
-                popularProducts.add(product);
+        String sql = "SELECT p.product_id, p.name, p.image_path, SUM(oi.quantity) as total_quantity, " +
+                    "SUM(oi.price * oi.quantity) as total_revenue " +
+                    "FROM orderitems oi " +
+                    "JOIN products p ON oi.product_id = p.product_id " +
+                    "JOIN orders o ON oi.order_id = o.order_id " +
+                    "WHERE o.order_date BETWEEN ? AND ? " +
+                    "GROUP BY p.product_id, p.name " +
+                    "ORDER BY total_quantity DESC " +
+                    "LIMIT ?";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+            stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+            stmt.setInt(3, limit);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> product = new HashMap<>();
+                    product.put("productId", rs.getInt("product_id"));
+                    product.put("name", rs.getString("name"));
+                    product.put("imagePath", rs.getString("image_path"));
+                    product.put("totalQuantity", rs.getInt("total_quantity"));
+                    product.put("totalRevenue", rs.getDouble("total_revenue"));
+                    
+                    // Print for debugging
+                    System.out.printf("Popular product: %s - Qty: %d, Revenue: $%.2f%n", 
+                        rs.getString("name"), rs.getInt("total_quantity"), rs.getDouble("total_revenue"));
+                    
+                    popularProducts.add(product);
+                }
             }
+        } catch (SQLException e) {
+            System.err.println("Error getting popular products: " + e.getMessage());
+            e.printStackTrace();
         }
-    } catch (SQLException e) {
-        System.err.println("Error getting popular products: " + e.getMessage());
-        e.printStackTrace();
+        
+        return popularProducts;
     }
-    
-    return popularProducts;
-}
 
     /**
      * Get total sales info between dates
@@ -570,5 +633,4 @@ public List<Map<String, Object>> getMostPopularProductsBetweenDates(Date startDa
 
         return summary;
     }
-
 }
