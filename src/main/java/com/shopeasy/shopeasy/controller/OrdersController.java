@@ -1,20 +1,22 @@
 package com.shopeasy.shopeasy.controller;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.shopeasy.shopeasy.dao.OrderDAO;
 import com.shopeasy.shopeasy.dao.UserDAO;
 import com.shopeasy.shopeasy.model.Order;
 import com.shopeasy.shopeasy.model.OrderItem;
 import com.shopeasy.shopeasy.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.io.IOException;
-import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
 
 @WebServlet("/orders/*")
 public class OrdersController extends HttpServlet {
@@ -52,12 +54,15 @@ public class OrdersController extends HttpServlet {
         
         // Set content type for JSON response
         response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
         
         // Check authorization
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("user") == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"error\":\"Unauthorized access. Please log in again.\",\"success\":false}");
+            String errorJson = "{\"error\":\"Unauthorized access. Please log in again.\",\"success\":false}";
+            response.setContentLength(errorJson.getBytes("UTF-8").length);
+            response.getWriter().write(errorJson);
             return;
         }
         
@@ -70,17 +75,28 @@ public class OrdersController extends HttpServlet {
                 // Get order ID from path
                 if (pathInfo == null || pathInfo.equals("/")) {
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    response.getWriter().write("{\"error\":\"Order ID is required\",\"success\":false}");
+                    String errorJson = "{\"error\":\"Order ID is required\",\"success\":false}";
+                    response.setContentLength(errorJson.getBytes("UTF-8").length);
+                    response.getWriter().write(errorJson);
                     return;
                 }
                 
                 // Clean up the path before parsing
                 String orderIdStr = pathInfo.substring(1).trim();
+                // Remove any trailing slashes
+                while (orderIdStr.endsWith("/")) {
+                    orderIdStr = orderIdStr.substring(0, orderIdStr.length() - 1);
+                }
+                
                 if (orderIdStr.isEmpty()) {
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    response.getWriter().write("{\"error\":\"Invalid order ID format\",\"success\":false}");
+                    String errorJson = "{\"error\":\"Invalid order ID format\",\"success\":false}";
+                    response.setContentLength(errorJson.getBytes("UTF-8").length);
+                    response.getWriter().write(errorJson);
                     return;
                 }
+                
+                System.out.println("Parsed order ID: " + orderIdStr); // Debugging
                 
                 int orderId = Integer.parseInt(orderIdStr);
                 
@@ -88,7 +104,9 @@ public class OrdersController extends HttpServlet {
                 Order order = orderDAO.getOrderById(orderId);
                 if (order == null) {
                     response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    response.getWriter().write("{\"error\":\"Order not found\",\"success\":false}");
+                    String errorJson = "{\"error\":\"Order not found\",\"success\":false}";
+                    response.setContentLength(errorJson.getBytes("UTF-8").length);
+                    response.getWriter().write(errorJson);
                     return;
                 }
                 
@@ -97,7 +115,9 @@ public class OrdersController extends HttpServlet {
                 if (customer == null) {
                     // Handle missing customer data gracefully
                     response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                    response.getWriter().write("{\"error\":\"Customer data not found for this order\",\"success\":false}");
+                    String errorJson = "{\"error\":\"Customer data not found for this order\",\"success\":false}";
+                    response.setContentLength(errorJson.getBytes("UTF-8").length);
+                    response.getWriter().write(errorJson);
                     return;
                 }
                 
@@ -138,21 +158,33 @@ public class OrdersController extends HttpServlet {
                 
                 jsonBuilder.append("}");
                 
-                // Send JSON response
-                response.getWriter().write(jsonBuilder.toString());
+                // Get the final JSON string
+                String jsonResponse = jsonBuilder.toString();
+                
+                // Set content length and send JSON response
+                response.setContentLength(jsonResponse.getBytes("UTF-8").length);
+                response.getWriter().write(jsonResponse);
                 
             } catch (NumberFormatException e) {
+                System.err.println("Error parsing order ID: " + e.getMessage());
+                e.printStackTrace();
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write("{\"error\":\"Invalid order ID format: " + e.getMessage() + "\",\"success\":false}");
+                String errorJson = "{\"error\":\"Invalid order ID format: " + e.getMessage() + "\",\"success\":false}";
+                response.setContentLength(errorJson.getBytes("UTF-8").length);
+                response.getWriter().write(errorJson);
             } catch (Exception e) {
                 System.err.println("Error getting order details: " + e.getMessage());
                 e.printStackTrace();
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.getWriter().write("{\"error\":\"Internal server error: " + e.getMessage() + "\",\"success\":false}");
+                String errorJson = "{\"error\":\"Internal server error: " + e.getMessage() + "\",\"success\":false}";
+                response.setContentLength(errorJson.getBytes("UTF-8").length);
+                response.getWriter().write(errorJson);
             }
         } else {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("{\"error\":\"Access denied. Only staff and managers can view order details.\",\"success\":false}");
+            String errorJson = "{\"error\":\"Access denied. Only staff and managers can view order details.\",\"success\":false}";
+            response.setContentLength(errorJson.getBytes("UTF-8").length);
+            response.getWriter().write(errorJson);
         }
     }
     
@@ -229,8 +261,11 @@ public class OrdersController extends HttpServlet {
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("user") == null) {
             response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized. Please log in.\"}");
+            String errorJson = "{\"success\":false,\"message\":\"Unauthorized. Please log in.\"}";
+            response.setContentLength(errorJson.getBytes("UTF-8").length);
+            response.getWriter().write(errorJson);
             return;
         }
         
@@ -241,6 +276,7 @@ public class OrdersController extends HttpServlet {
         if (role.equals("manager") || role.equals("staff")) {
             String action = request.getParameter("action");
             response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
             
             if ("updateStatus".equals(action)) {
                 try {
@@ -248,7 +284,9 @@ public class OrdersController extends HttpServlet {
                     String newStatus = request.getParameter("status");
                     
                     if (orderIdParam == null || newStatus == null || orderIdParam.trim().isEmpty() || newStatus.trim().isEmpty()) {
-                        response.getWriter().write("{\"success\":false,\"message\":\"Missing order ID or status\"}");
+                        String errorJson = "{\"success\":false,\"message\":\"Missing order ID or status\"}";
+                        response.setContentLength(errorJson.getBytes("UTF-8").length);
+                        response.getWriter().write(errorJson);
                         return;
                     }
                     
@@ -258,16 +296,24 @@ public class OrdersController extends HttpServlet {
                     boolean success = orderDAO.updateOrderStatus(orderId, newStatus);
                     
                     if (success) {
-                        response.getWriter().write("{\"success\":true,\"message\":\"Order status updated successfully\"}");
+                        String successJson = "{\"success\":true,\"message\":\"Order status updated successfully\"}";
+                        response.setContentLength(successJson.getBytes("UTF-8").length);
+                        response.getWriter().write(successJson);
                     } else {
-                        response.getWriter().write("{\"success\":false,\"message\":\"Failed to update order status\"}");
+                        String errorJson = "{\"success\":false,\"message\":\"Failed to update order status\"}";
+                        response.setContentLength(errorJson.getBytes("UTF-8").length);
+                        response.getWriter().write(errorJson);
                     }
                 } catch (NumberFormatException e) {
-                    response.getWriter().write("{\"success\":false,\"message\":\"Invalid order ID format\"}");
+                    String errorJson = "{\"success\":false,\"message\":\"Invalid order ID format\"}";
+                    response.setContentLength(errorJson.getBytes("UTF-8").length);
+                    response.getWriter().write(errorJson);
                 } catch (Exception e) {
                     System.err.println("Error updating order status: " + e.getMessage());
                     e.printStackTrace();
-                    response.getWriter().write("{\"success\":false,\"message\":\"Server error: " + e.getMessage() + "\"}");
+                    String errorJson = "{\"success\":false,\"message\":\"Server error: " + escapeJson(e.getMessage()) + "\"}";
+                    response.setContentLength(errorJson.getBytes("UTF-8").length);
+                    response.getWriter().write(errorJson);
                 }
             } else {
                 // Forward back to orders page for other actions
@@ -275,7 +321,10 @@ public class OrdersController extends HttpServlet {
             }
         } else {
             response.setContentType("application/json");
-            response.getWriter().write("{\"success\":false,\"message\":\"Access denied. Only staff and managers can update orders.\"}");
+            response.setCharacterEncoding("UTF-8");
+            String errorJson = "{\"success\":false,\"message\":\"Access denied. Only staff and managers can update orders.\"}";
+            response.setContentLength(errorJson.getBytes("UTF-8").length);
+            response.getWriter().write(errorJson);
         }
     }
 }

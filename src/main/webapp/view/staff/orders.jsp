@@ -5,6 +5,9 @@
 <!DOCTYPE html>
 <%@ include file="dashboard-template.jsp" %>
 
+<!-- Set context path as JavaScript variable -->
+<c:set var="contextPath" value="${pageContext.request.contextPath}" />
+
 <!-- Orders Styles -->
 <style>
     .status-badge {
@@ -57,10 +60,419 @@
     }
 </style>
 
+<!-- Define JavaScript functions first -->
+<script>
+    // Get the application context path from the JSP variable
+    const contextPath = "${contextPath}";
+    
+    // Use base URL from current page location
+    const baseUrl = window.location.origin;
+    
+    // Print debug info
+    console.log('Context path is:', contextPath);
+    console.log('Base URL is:', baseUrl);
+    console.log('Full URL:', window.location.href);
+    
+    // View order details function - Get data from the table
+    function viewOrderDetails(orderId) {
+        // Convert orderId to integer
+        orderId = parseInt(orderId, 10);
+        
+        // Validate order ID
+        if (isNaN(orderId) || orderId <= 0) {
+            console.error('Invalid order ID:', orderId);
+            alert('Invalid order ID');
+            return;
+        }
+        
+        // Show modal
+        document.getElementById('orderDetailsModal').classList.remove('hidden');
+        document.getElementById('modalOrderId').textContent = `Order #${orderId}`;
+        
+        // Display loading spinner
+        document.getElementById('orderDetailsContent').innerHTML = `
+            <div class="flex justify-center items-center p-10">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+            </div>
+        `;
+        
+        // Find the row with the specified order ID
+        const rows = document.querySelectorAll('tr[data-order-id]');
+        
+        let foundRow = null;
+        rows.forEach(row => {
+            const rowId = row.getAttribute('data-order-id');
+            if (rowId == orderId) {
+                foundRow = row;
+            }
+        });
+        
+        const row = foundRow;
+        
+        if (!row) {
+            console.error("Failed to find row for order ID:", orderId);
+            document.getElementById('orderDetailsContent').innerHTML = `
+                <div class="p-4 text-red-500">
+                    <p>Error: Could not find order data in the table (Order ID: ${orderId})</p>
+                    <p class="mt-2 text-gray-600 text-sm">Please try refreshing the page and try again.</p>
+                    <button onclick="closeOrderModal()" class="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                        Close
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        try {
+            // Initialize variables with default values
+            let customerName = "Not available";
+            let customerEmail = "Not available";
+            let dateText = "Not available";
+            let totalAmount = 0;
+            let status = "pending";
+            let paymentMethod = "Not available";
+            
+            // Get customer name and email
+            const nameCell = row.querySelector('td:nth-child(2)');
+            if (nameCell) {
+                const nameDiv = nameCell.querySelector('.text-gray-900');
+                const emailDiv = nameCell.querySelector('.text-gray-500');
+                
+                if (nameDiv) customerName = nameDiv.textContent.trim();
+                if (emailDiv) customerEmail = emailDiv.textContent.trim();
+            }
+            
+            // Get date
+            const dateCell = row.querySelector('td:nth-child(3)');
+            if (dateCell) {
+                const dateDiv = dateCell.querySelector('.text-gray-900');
+                if (dateDiv) dateText = dateDiv.textContent.trim();
+            }
+            
+            // Get total
+            const totalCell = row.querySelector('td:nth-child(4)');
+            if (totalCell) {
+                const totalDiv = totalCell.querySelector('.text-gray-900');
+                if (totalDiv) {
+                    const totalText = totalDiv.textContent.trim();
+                    totalAmount = parseFloat(totalText.replace('$', '')) || 0;
+                }
+            }
+            
+            // Get status
+            const statusCell = row.querySelector('td:nth-child(5)');
+            if (statusCell) {
+                const statusBadge = statusCell.querySelector('.status-badge');
+                if (statusBadge) {
+                    // Get status from the data attribute first (most reliable)
+                    status = row.getAttribute('data-status') || 'pending';
+                    
+                    // If that doesn't work, try to get from status badge text
+                    if (!status) {
+                        const badgeText = statusBadge.textContent.trim();
+                        if (badgeText) status = badgeText.toLowerCase();
+                    }
+                }
+            }
+            
+            // Get payment method
+            const paymentCell = row.querySelector('td:nth-child(6)');
+            if (paymentCell) {
+                const paymentDiv = paymentCell.querySelector('.text-gray-900');
+                if (paymentDiv) paymentMethod = paymentDiv.textContent.trim();
+            }
+            
+            // Format date for display
+            const orderDate = new Date(dateText);
+            const formattedDate = orderDate.toString() !== "Invalid Date" ? 
+                orderDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : dateText;
+            
+            // Capitalize status for display
+            const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+            
+            // Format and display order details
+            const orderDetails = document.getElementById('orderDetailsContent');
+            
+            // Clear existing content
+            orderDetails.innerHTML = '';
+            
+            // Create elements directly instead of using template literals
+            const container = document.createElement('div');
+            container.className = 'grid grid-cols-1 md:grid-cols-2 gap-6 mb-6';
+            
+            // Customer Info section
+            const customerSection = document.createElement('div');
+            const customerTitle = document.createElement('h4');
+            customerTitle.className = 'text-sm font-medium text-gray-500 mb-1';
+            customerTitle.textContent = 'Customer Info';
+            const customerNameP = document.createElement('p');
+            customerNameP.className = 'text-sm';
+            customerNameP.textContent = customerName;
+            const customerEmailP = document.createElement('p');
+            customerEmailP.className = 'text-sm';
+            customerEmailP.textContent = customerEmail;
+            customerSection.appendChild(customerTitle);
+            customerSection.appendChild(customerNameP);
+            customerSection.appendChild(customerEmailP);
+            
+            // Order Info section
+            const orderInfoSection = document.createElement('div');
+            const orderInfoTitle = document.createElement('h4');
+            orderInfoTitle.className = 'text-sm font-medium text-gray-500 mb-1';
+            orderInfoTitle.textContent = 'Order Info';
+            const dateP = document.createElement('p');
+            dateP.className = 'text-sm';
+            dateP.textContent = "Date: " + (formattedDate || "Not available");
+            const paymentP = document.createElement('p');
+            paymentP.className = 'text-sm';
+            paymentP.textContent = "Payment: " + (paymentMethod || "Not available");
+            
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'mt-2';
+            const statusLabel = document.createElement('label');
+            statusLabel.className = 'text-sm font-medium text-gray-500 mr-2';
+            statusLabel.textContent = 'Status:';
+            const statusBadge = document.createElement('span');
+            statusBadge.className = `text-sm status-badge status-${status}`;
+            statusBadge.textContent = displayStatus || "Unknown";
+            
+            statusDiv.appendChild(statusLabel);
+            statusDiv.appendChild(statusBadge);
+            
+            orderInfoSection.appendChild(orderInfoTitle);
+            orderInfoSection.appendChild(dateP);
+            orderInfoSection.appendChild(paymentP);
+            orderInfoSection.appendChild(statusDiv);
+            
+            // Add all sections to the container
+            container.appendChild(customerSection);
+            container.appendChild(orderInfoSection);
+            
+            // Create the total display
+            const totalDiv = document.createElement('div');
+            totalDiv.className = 'border-t border-gray-200 pt-4 text-right';
+            const totalText = document.createElement('div');
+            totalText.className = 'text-sm mb-1 font-medium';
+            
+            // Format the total properly
+            let formattedTotal = "$0.00";
+            if (totalAmount) {
+                formattedTotal = "$" + totalAmount.toFixed(2);
+            }
+            totalText.textContent = "Total: " + formattedTotal;
+            totalDiv.appendChild(totalText);
+            
+            // Add close button
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.className = 'flex justify-end mt-6';
+            
+            const closeButton = document.createElement('button');
+            closeButton.className = 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300';
+            closeButton.textContent = 'Close';
+            closeButton.onclick = function() {
+                closeOrderModal();
+            };
+            
+            buttonsDiv.appendChild(closeButton);
+            
+            // Add all components to the order details
+            orderDetails.appendChild(container);
+            orderDetails.appendChild(totalDiv);
+            orderDetails.appendChild(buttonsDiv);
+        } catch (error) {
+            console.error('Error extracting data:', error);
+            document.getElementById('orderDetailsContent').innerHTML = `
+                <div class="p-4 text-red-500">
+                    <p>Error processing order details: ${error.message}</p>
+                    <p class="mt-2 text-gray-600 text-sm">Please try again or contact the IT department if the issue persists.</p>
+                    <button onclick="closeOrderModal()" class="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                        Close
+                    </button>
+                </div>
+            `;
+        }
+    }
+    
+    // Update order status function - Use form submit + target iframe to stay on page
+    function updateOrderStatus(orderId, status) {
+        // Convert orderId to integer
+        orderId = parseInt(orderId, 10);
+        
+        if (!status) return; // No status selected
+        
+        console.log("Starting update for order ID:", orderId, "to status:", status);
+        
+        // Customize confirmation message based on action
+        let confirmMessage = `Are you sure you want to update order #${orderId} status to ${status.charAt(0).toUpperCase() + status.slice(1)}?`;
+        
+        // Show confirmation dialog
+        if (confirm(confirmMessage)) {
+            // Show loading state
+            const row = document.querySelector('tr[data-order-id="' + orderId + '"]');
+            console.log("Found row for update:", row);
+                
+            if (row) {
+                const statusCell = row.querySelector('td:nth-child(5) .status-badge');
+                if (statusCell) {
+                    console.log("Current status display:", statusCell.textContent);
+                    statusCell.innerHTML = `<span class="animate-pulse">Updating...</span>`;
+                }
+            }
+            
+            // Create iframe if it doesn't exist
+            let statusIframe = document.getElementById('statusUpdateIframe');
+            if (!statusIframe) {
+                statusIframe = document.createElement('iframe');
+                statusIframe.id = 'statusUpdateIframe';
+                statusIframe.name = 'statusUpdateIframe';
+                statusIframe.style.display = 'none';
+                document.body.appendChild(statusIframe);
+            }
+            
+            // Create a form to submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `${baseUrl}${contextPath}/orders`;
+            form.target = 'statusUpdateIframe'; // Target the hidden iframe
+            form.style.display = 'none';
+            
+            // Add input fields
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'updateStatus';
+            form.appendChild(actionInput);
+            
+            const orderIdInput = document.createElement('input');
+            orderIdInput.type = 'hidden';
+            orderIdInput.name = 'orderId';
+            orderIdInput.value = orderId;
+            form.appendChild(orderIdInput);
+            
+            const statusInput = document.createElement('input');
+            statusInput.type = 'hidden';
+            statusInput.name = 'status';
+            statusInput.value = status;
+            form.appendChild(statusInput);
+            
+            // Log what we're sending
+            console.log("Submitting form with data:", {
+                action: 'updateStatus',
+                orderId: orderId,
+                status: status
+            });
+            
+            // Handle iframe load (response)
+            statusIframe.onload = function() {
+                try {
+                    // Try to extract response text from iframe
+                    const iframeContent = statusIframe.contentDocument || statusIframe.contentWindow.document;
+                    const responseText = iframeContent.body.textContent;
+                    
+                    console.log("Status update response:", responseText);
+                    
+                    try {
+                        // Try parsing as JSON
+                        const jsonResponse = JSON.parse(responseText);
+                        console.log("Parsed JSON response:", jsonResponse);
+                        
+                        if (jsonResponse.success) {
+                            console.log("Status update successful!");
+                        } else {
+                            console.error("Status update failed:", jsonResponse.message);
+                            alert("Failed to update status: " + jsonResponse.message);
+                            return;
+                        }
+                    } catch (e) {
+                        console.log("Response is not JSON, assuming success");
+                    }
+                    
+                    // Update UI immediately
+                    if (row) {
+                        // Update data attribute
+                        row.setAttribute('data-status', status);
+                        console.log("Updated row data-status to:", status);
+                        
+                        // Update status badge
+                        const statusBadge = row.querySelector('td:nth-child(5) .status-badge');
+                        if (statusBadge) {
+                            // Remove all status classes
+                            statusBadge.classList.remove('status-packaging', 'status-shipping', 'status-delivery', 'status-delivered');
+                            
+                            // Add the new status class
+                            statusBadge.classList.add(`status-${status}`);
+                            
+                            // Update the text with proper capitalization
+                            statusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                            
+                            console.log("Updated status badge to:", statusBadge.textContent);
+                        }
+                        
+                        // Show success message
+                        alert('Order status updated successfully');
+                    }
+                } catch (error) {
+                    console.error("Error handling iframe response:", error);
+                    alert("Error handling status update response");
+                }
+            };
+            
+            // Submit form to iframe
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+            console.log("Form submitted");
+        }
+    }
+    
+    // Close order details modal
+    function closeOrderModal() {
+        document.getElementById('orderDetailsModal').classList.add('hidden');
+    }
+    
+    // Update order status from modal
+    function updateOrderStatusFromModal(orderId) {
+        // Ensure orderId is an integer
+        orderId = parseInt(orderId, 10);
+        
+        // Get the status from the select element
+        const statusSelect = document.getElementById('modalOrderStatus');
+        const status = statusSelect.value;
+        
+        if (!status || status === '') {
+            alert('Please select a status');
+            return;
+        }
+        
+        console.log(`Updating order #${orderId} to status: ${status}`);
+        
+        // Close the modal first
+        closeOrderModal();
+        
+        // Then update the status
+        updateOrderStatus(orderId, status);
+    }
+</script>
+
 <!-- Set page title -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         setPageTitle('Order Management');
+        
+        // Filter events
+        if (document.getElementById('statusFilter')) {
+            document.getElementById('statusFilter').addEventListener('change', filterOrders);
+        }
+        if (document.getElementById('dateFilter')) {
+            document.getElementById('dateFilter').addEventListener('change', filterOrders);
+        }
+        if (document.getElementById('searchOrder')) {
+            document.getElementById('searchOrder').addEventListener('input', filterOrders);
+        }
     });
 </script>
 
@@ -90,11 +502,10 @@
                 <label for="statusFilter" class="text-sm text-gray-600 mr-2">Status:</label>
                 <select id="statusFilter" class="rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring focus:ring-green-200 focus:ring-opacity-50">
                     <option value="all">All</option>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
+                    <option value="packaging">Packaging</option>
+                    <option value="shipping">Shipping</option>
+                    <option value="delivery">Delivery</option>
                     <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
                 </select>
             </div>
             
@@ -175,11 +586,10 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="status-badge status-${order.status}">
                                         <c:choose>
-                                            <c:when test="${order.status == 'pending'}">Pending</c:when>
-                                            <c:when test="${order.status == 'processing'}">Processing</c:when>
-                                            <c:when test="${order.status == 'shipped'}">Shipped</c:when>
+                                            <c:when test="${order.status == 'packaging'}">Packaging</c:when>
+                                            <c:when test="${order.status == 'shipping'}">Shipping</c:when>
+                                            <c:when test="${order.status == 'delivery'}">Delivery</c:when>
                                             <c:when test="${order.status == 'delivered'}">Delivered</c:when>
-                                            <c:when test="${order.status == 'cancelled'}">Cancelled</c:when>
                                             <c:otherwise>${order.status}</c:otherwise>
                                         </c:choose>
                                     </span>
@@ -188,16 +598,15 @@
                                     <div class="text-sm text-gray-900">${order.paymentMethod}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button onclick="viewOrderDetails(${order.orderId})" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                                    <button data-order-id="${order.orderId}" onclick="viewOrderDetails(this.getAttribute('data-order-id'))" class="text-indigo-600 hover:text-indigo-900 mr-3">
                                         View
                                     </button>
-                                    <select onchange="updateOrderStatus(${order.orderId}, this.value)" class="status-dropdown">
+                                    <select data-order-id="${order.orderId}" onchange="updateOrderStatus(this.getAttribute('data-order-id'), this.value)" class="status-dropdown">
                                         <option value="">Update Status</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="processing">Processing</option>
-                                        <option value="shipped">Shipped</option>
+                                        <option value="packaging">Packaging</option>
+                                        <option value="shipping">Shipping</option>
+                                        <option value="delivery">Delivery</option>
                                         <option value="delivered">Delivered</option>
-                                        <option value="cancelled">Cancelled</option>
                                     </select>
                                 </td>
                             </tr>
@@ -244,489 +653,3 @@
         </div>
     </div>
 </div>
-
-<!-- Orders JavaScript -->
-<script>
-    // Initialize on document load
-    document.addEventListener('DOMContentLoaded', function() {
-        // Filter events
-        document.getElementById('statusFilter').addEventListener('change', filterOrders);
-        document.getElementById('dateFilter').addEventListener('change', filterOrders);
-        document.getElementById('searchOrder').addEventListener('input', filterOrders);
-        
-        // Initialize counters
-        updateCounters();
-        
-        // Add data-order-id attribute to each row on page load
-        const rows = document.querySelectorAll('#ordersTableBody tr:not(#noOrdersRow)');
-        rows.forEach(row => {
-            const orderIdCell = row.querySelector('td:first-child div');
-            if (orderIdCell) {
-                const orderId = orderIdCell.textContent.replace('#', '').trim();
-                row.setAttribute('data-order-id', orderId);
-            }
-        });
-    });
-    
-    // Filter orders based on status, date, and search
-    function filterOrders() {
-        const statusFilter = document.getElementById('statusFilter').value;
-        const dateFilter = document.getElementById('dateFilter').value;
-        const searchFilter = document.getElementById('searchOrder').value.toLowerCase();
-        
-        const rows = document.querySelectorAll('#ordersTableBody tr:not(#noOrdersRow)');
-        let visibleCount = 0;
-        
-        rows.forEach(row => {
-            let shouldShow = true;
-            
-            // Filter by status
-            if (statusFilter !== 'all') {
-                const rowStatus = row.getAttribute('data-status');
-                if (statusFilter !== rowStatus) {
-                    shouldShow = false;
-                }
-            }
-            
-            // Filter by date
-            if (dateFilter !== 'all' && shouldShow) {
-                const dateCell = row.querySelector('td:nth-child(3) .text-sm').textContent.trim();
-                const orderDate = new Date(dateCell);
-                const today = new Date();
-                
-                if (dateFilter === 'today') {
-                    if (orderDate.toDateString() !== today.toDateString()) {
-                        shouldShow = false;
-                    }
-                } else if (dateFilter === 'week') {
-                    // Get start of week (Sunday)
-                    const startOfWeek = new Date(today);
-                    startOfWeek.setDate(today.getDate() - today.getDay());
-                    startOfWeek.setHours(0, 0, 0, 0);
-                    
-                    if (orderDate < startOfWeek) {
-                        shouldShow = false;
-                    }
-                } else if (dateFilter === 'month') {
-                    // Get start of month
-                    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                    
-                    if (orderDate < startOfMonth) {
-                        shouldShow = false;
-                    }
-                }
-            }
-            
-            // Filter by search
-            if (searchFilter && shouldShow) {
-                const orderIdCell = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
-                const customerNameCell = row.querySelector('td:nth-child(2) div:first-child').textContent.toLowerCase();
-                const customerEmailCell = row.querySelector('td:nth-child(2) div:last-child').textContent.toLowerCase();
-                
-                if (!orderIdCell.includes(searchFilter) && 
-                    !customerNameCell.includes(searchFilter) && 
-                    !customerEmailCell.includes(searchFilter)) {
-                    shouldShow = false;
-                }
-            }
-            
-            // Show or hide row
-            if (shouldShow) {
-                row.classList.remove('hidden');
-                visibleCount++;
-            } else {
-                row.classList.add('hidden');
-            }
-        });
-        
-        // Show or hide "No orders found" message
-        const noOrdersRow = document.getElementById('noOrdersRow');
-        if (!noOrdersRow) {
-            // Create "No orders found" row if it doesn't exist
-            if (visibleCount === 0) {
-                const tbody = document.getElementById('ordersTableBody');
-                const newRow = document.createElement('tr');
-                newRow.id = 'noOrdersRow';
-                newRow.innerHTML = `
-                    <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
-                        No orders found matching your filters
-                    </td>
-                `;
-                tbody.appendChild(newRow);
-            }
-        } else {
-            // Toggle existing row
-            noOrdersRow.classList.toggle('hidden', visibleCount > 0);
-        }
-        
-        // Update counters
-        updateCounters(visibleCount);
-    }
-    
-    // Update counter displays
-    function updateCounters(visibleCount) {
-        const rows = document.querySelectorAll('#ordersTableBody tr:not(#noOrdersRow):not(.hidden)');
-        visibleCount = visibleCount || rows.length;
-        
-        document.getElementById('totalOrders').textContent = `Total: ${visibleCount} orders`;
-        document.getElementById('startCount').textContent = visibleCount > 0 ? '1' : '0';
-        document.getElementById('endCount').textContent = Math.min(10, visibleCount);
-        document.getElementById('totalCount').textContent = visibleCount;
-    }
-    
-    // View order details
-    function viewOrderDetails(orderId) {
-        // Show modal
-        document.getElementById('orderDetailsModal').classList.remove('hidden');
-        document.getElementById('modalOrderId').textContent = `Order #${orderId}`;
-        
-        // Display loading spinner
-        document.getElementById('orderDetailsContent').innerHTML = `
-            <div class="flex justify-center items-center p-10">
-                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-            </div>
-        `;
-        
-        // Load order details via AJAX
-const apiUrl = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/orders'))}/orders/${orderId}`;
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Failed to load order details (Status: ${response.status})`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Format and display order details
-                const orderDetails = document.getElementById('orderDetailsContent');
-                
-                // Format date
-                const orderDate = new Date(data.orderDate);
-                const formattedDate = orderDate.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-                
-                // Store the current status to set selected option after rendering
-                
-                // Build the HTML for order details
-                let itemsHtml = '';
-                let subtotal = 0;
-                
-                if (data.items && data.items.length > 0) {
-                    data.items.forEach(item => {
-                        const itemTotal = item.price * item.quantity;
-                        subtotal += itemTotal;
-                        
-                        itemsHtml += `
-                            <tr>
-                                <td class="px-4 py-2 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">${item.productName}</div>
-                                </td>
-                                <td class="px-4 py-2 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">$${item.price.toFixed(2)}</div>
-                                </td>
-                                <td class="px-4 py-2 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">${item.quantity}</div>
-                                </td>
-                                <td class="px-4 py-2 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">$${itemTotal.toFixed(2)}</div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    itemsHtml = `
-                        <tr>
-                            <td colspan="4" class="px-4 py-2 text-center text-sm text-gray-500">
-                                No items found for this order
-                            </td>
-                        </tr>
-                    `;
-                }
-                
-                orderDetails.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-500 mb-1">Customer Info</h4>
-                            <p class="text-sm">${data.customerName}</p>
-                            <p class="text-sm">${data.customerEmail}</p>
-                            <p class="text-sm">${data.customerPhone || 'No phone provided'}</p>
-                        </div>
-                        
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-500 mb-1">Shipping Address</h4>
-                            <p class="text-sm">${data.shippingAddress}</p>
-                        </div>
-                        
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-500 mb-1">Order Info</h4>
-                            <p class="text-sm">Date: ${formattedDate}</p>
-                            <p class="text-sm">Payment: ${data.paymentMethod}</p>
-                            <div class="mt-2">
-                                <label for="modalOrderStatus" class="text-sm font-medium text-gray-500 mr-2">Status:</label>
-                                <select id="modalOrderStatus" class="rounded text-sm border-gray-300 focus:border-green-500 focus:ring focus:ring-green-200 focus:ring-opacity-50">
-                                    <option value="pending">Pending</option>
-                                    <option value="processing">Processing</option>
-                                    <option value="shipped">Shipped</option>
-                                    <option value="delivered">Delivered</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
-                                <button onclick="updateOrderStatusFromModal(${data.orderId})" class="ml-2 px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600">
-                                    Update
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="border-t border-gray-200 pt-4 mb-4">
-                        <h4 class="font-medium text-gray-700 mb-3">Order Items</h4>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Product
-                                        </th>
-                                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Price
-                                        </th>
-                                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Quantity
-                                        </th>
-                                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Total
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    ${itemsHtml}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <div class="border-t border-gray-200 pt-4 flex justify-between">
-                        <div></div>
-                        <div class="text-right">
-                            <div class="text-sm mb-1">Subtotal: $${data.totalAmount.toFixed(2)}</div>
-                            <div class="text-sm mb-1">Shipping: $0.00</div>
-                            <div class="text-lg font-semibold">Total: $${data.totalAmount.toFixed(2)}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-end mt-6">
-                        <button onclick="closeOrderModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 mr-2">
-                            Close
-                        </button>
-                        <button onclick="printOrderInvoice(${data.orderId})" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
-                            <i class="fas fa-print mr-1"></i> Print Invoice
-                        </button>
-                    </div>
-                `;
-                
-                // Set the selected option in the status dropdown
-                setTimeout(() => {
-                    const statusSelect = document.getElementById('modalOrderStatus');
-                    if (statusSelect && data.status) {
-                        // Find and select the option matching the current status
-                        for (let i = 0; i < statusSelect.options.length; i++) {
-                            if (statusSelect.options[i].value === data.status) {
-                                statusSelect.selectedIndex = i;
-                                break;
-                            }
-                        }
-                    }
-                }, 0);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('orderDetailsContent').innerHTML = `
-                    <div class="p-4 text-red-500">
-                        <p>Error loading order details: ${error.message}</p>
-                        <p class="mt-2 text-gray-600 text-sm">Please try again or contact the IT department if the issue persists.</p>
-                        <button onclick="closeOrderModal()" class="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
-                            Close
-                        </button>
-                    </div>
-                `;
-            });
-    }
-    
-    // Close order details modal
-    function closeOrderModal() {
-        document.getElementById('orderDetailsModal').classList.add('hidden');
-    }
-    
-    // Update order status
-    function updateOrderStatus(orderId, status) {
-        if (!status) return; // No status selected
-        
-        // Customize confirmation message based on action
-        let confirmMessage = `Are you sure you want to update order #${orderId} status to ${status.charAt(0).toUpperCase() + status.slice(1)}?`;
-        
-        if (status === 'cancelled') {
-            confirmMessage = `Are you sure you want to cancel order #${orderId}? This will permanently delete the order from the system.`;
-        }
-        
-        // Show confirmation dialog
-        if (confirm(confirmMessage)) {
-            // Show loading state
-            const row = document.querySelector(`tr[data-order-id="${orderId}"]`) || 
-                       Array.from(document.querySelectorAll('#ordersTableBody tr')).find(row => 
-                           row.querySelector('td:first-child').textContent.includes(`#${orderId}`)
-                       );
-                
-            if (row) {
-                const statusCell = row.querySelector('td:nth-child(5) .status-badge');
-                if (statusCell) {
-                    statusCell.innerHTML = `<span class="animate-pulse">Updating...</span>`;
-                }
-            }
-            
-            // Get the context path
-            const contextPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/orders'));
-            
-            // Send AJAX request to update status
-            fetch(`${contextPath}/orders`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `action=updateStatus&orderId=${orderId}&status=${status}`
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Failed to update order status (Status: ${response.status})`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // For cancelled orders, remove the row immediately
-                    if (status === 'cancelled') {
-                        if (row) {
-                            // Fade out animation before removal
-                            row.style.transition = 'opacity 0.5s ease-out';
-                            row.style.opacity = '0';
-                            
-                            // Remove after animation completes
-                            setTimeout(() => {
-                                row.remove();
-                                updateCounters();
-                                
-                                // Check if we need to show "No orders found" message
-                                const visibleRows = document.querySelectorAll('#ordersTableBody tr:not(.hidden):not(#noOrdersRow)');
-                                if (visibleRows.length === 0) {
-                                    const tbody = document.getElementById('ordersTableBody');
-                                    const noOrdersRow = document.getElementById('noOrdersRow') || document.createElement('tr');
-                                    
-                                    if (!document.getElementById('noOrdersRow')) {
-                                        noOrdersRow.id = 'noOrdersRow';
-                                        noOrdersRow.innerHTML = `
-                                            <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
-                                                No orders found matching your filters
-                                            </td>
-                                        `;
-                                        tbody.appendChild(noOrdersRow);
-                                    } else {
-                                        noOrdersRow.classList.remove('hidden');
-                                    }
-                                }
-                            }, 500);
-                            
-                            // Show success message
-                            alert('Order has been cancelled and removed from the system');
-                        } else {
-                            // If row not found, refresh the page
-                            window.location.reload();
-                        }
-                    } else {
-                        // Regular status update (not cancellation)
-                        if (row) {
-                            // Update data attribute
-                            row.setAttribute('data-status', status);
-                            
-                            // Update status badge
-                            const statusBadge = row.querySelector('.status-badge');
-                            if (statusBadge) {
-                                // Remove all status classes
-                                statusBadge.classList.remove('status-pending', 'status-processing', 'status-shipped', 'status-delivered', 'status-cancelled');
-                                
-                                // Add the new status class
-                                statusBadge.classList.add(`status-${status}`);
-                                
-                                // Update the text
-                                statusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-                            }
-                            
-                            // Show success message
-                            alert('Order status updated successfully');
-                            
-                            // Apply filters after update
-                            filterOrders();
-                        } else {
-                            // If row not found, refresh the page
-                            window.location.reload();
-                        }
-                    }
-                } else {
-                    alert(`Failed to update order status: ${data.message || 'Unknown error'}`);
-                    // Refresh the page to show current data
-                    window.location.reload();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(`An error occurred while updating the order status: ${error.message}`);
-                // Refresh the page to show current data
-                window.location.reload();
-            });
-        }
-    }
-    
-    // Update order status from modal
-    function updateOrderStatusFromModal(orderId) {
-        const status = document.getElementById('modalOrderStatus').value;
-        
-        // Special handling for cancellation from modal
-        if (status === 'cancelled') {
-            if (confirm('Are you sure you want to cancel this order? This will permanently delete the order from the system.')) {
-                // Close the modal first
-                closeOrderModal();
-                
-                // Then process the cancellation
-                updateOrderStatus(orderId, status);
-            }
-        } else {
-            updateOrderStatus(orderId, status);
-            
-            // Also update the status in the modal
-            const statusSelect = document.getElementById('modalOrderStatus');
-            if (statusSelect) {
-                const statusText = statusSelect.options[statusSelect.selectedIndex].text;
-                
-                // Add a temporary message
-                const label = statusSelect.previousElementSibling;
-                const originalText = label.textContent;
-                label.innerHTML = `${originalText} <span class="text-green-500">(Updated!)</span>`;
-                
-                // Remove the message after 2 seconds
-                setTimeout(() => {
-                    label.textContent = originalText;
-                }, 2000);
-            }
-        }
-    }
-    
-    // Print order invoice
-    function printOrderInvoice(orderId) {
-        // Get the context path
-        const contextPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/orders'));
-        
-        // Redirect to invoice page
-        window.open(`${contextPath}/invoice?orderId=${orderId}`, '_blank');
-    }
-</script>

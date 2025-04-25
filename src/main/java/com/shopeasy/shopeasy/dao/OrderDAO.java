@@ -1,5 +1,6 @@
 package com.shopeasy.shopeasy.dao;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,6 +10,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,8 +18,6 @@ import com.shopeasy.shopeasy.model.Order;
 import com.shopeasy.shopeasy.model.OrderItem;
 import com.shopeasy.shopeasy.model.Product;
 import com.shopeasy.shopeasy.util.DBUtil;
-import java.math.BigDecimal;
-import java.util.LinkedHashMap;
 
 /**
  * Data Access Object for Order entity
@@ -114,15 +114,9 @@ public class OrderDAO {
      * @return true if successful, false otherwise
      */
     public boolean updateOrderStatus(int orderId, String status) {
-        // If status is cancelled, delete the order instead of updating status
-        if (status.equalsIgnoreCase("cancelled")) {
-            return deleteOrder(orderId);
-        }
-        
-        // Otherwise, update the status
-        // Map the status from our app to the database enum values
+        // Map the application status to database status
         String dbStatus;
-        switch(status.toLowerCase()) {
+        switch(status) {
             case "pending":
                 dbStatus = "packaging";
                 break;
@@ -135,8 +129,11 @@ public class OrderDAO {
             case "delivered":
                 dbStatus = "delivered";
                 break;
+            case "cancelled":
+                dbStatus = "cancelled";
+                break;
             default:
-                dbStatus = "packaging";
+                dbStatus = "packaging"; // Default to packaging if unknown status
         }
         
         String sql = "UPDATE orders SET order_status = ? WHERE order_id = ?";
@@ -145,8 +142,8 @@ public class OrderDAO {
             stmt.setString(1, dbStatus);
             stmt.setInt(2, orderId);
             
-            int affectedRows = stmt.executeUpdate();
-            return affectedRows > 0;
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
         } catch (SQLException e) {
             System.err.println("Error updating order status: " + e.getMessage());
             e.printStackTrace();
@@ -359,27 +356,33 @@ public class OrderDAO {
         
         order.setShippingAddress(rs.getString("shipping_address"));
         
-        // Map the database status to our app status
+        // Map the database status to our app status consistently
         String dbStatus = rs.getString("order_status");
         String appStatus;
-        switch(dbStatus) {
-            case "packaging":
-                appStatus = "pending";
-                break;
-            case "shipping":
-                appStatus = "processing";
-                break;
-            case "delivery":
-                appStatus = "shipped";
-                break;
-            case "delivered":
-                appStatus = "delivered";
-                break;
-            case "cancelled":  // Handle cancelled status
-                appStatus = "cancelled";
-                break;
-            default:
-                appStatus = "pending";
+        if (dbStatus == null) {
+            // Handle null status
+            appStatus = "pending";
+        } else {
+            switch(dbStatus) {
+                case "packaging":
+                    appStatus = "pending";
+                    break;
+                case "shipping":
+                    appStatus = "processing";
+                    break;
+                case "delivery":
+                    appStatus = "shipped";
+                    break;
+                case "delivered":
+                    appStatus = "delivered";
+                    break;
+                case "cancelled":
+                    appStatus = "cancelled";
+                    break;
+                default:
+                    // For any other database status, default to pending
+                    appStatus = "pending";
+            }
         }
         order.setStatus(appStatus);
         
@@ -632,5 +635,27 @@ public class OrderDAO {
         }
 
         return summary;
+    }
+
+    /**
+     * Get the count of orders for a specific user
+     * @param userId User ID
+     * @return Number of orders
+     */
+    public int getOrderCountByUserId(int userId) {
+        String sql = "SELECT COUNT(*) FROM orders WHERE user_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting order count for user: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return 0;
     }
 }
