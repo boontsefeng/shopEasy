@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -18,7 +17,7 @@ import com.shopeasy.shopeasy.model.OrderItem;
 import com.shopeasy.shopeasy.model.Product;
 import com.shopeasy.shopeasy.util.DBUtil;
 import java.math.BigDecimal;
-import java.util.Arrays;
+import java.util.LinkedHashMap;
 
 /**
  * Data Access Object for Order entity
@@ -404,493 +403,172 @@ private Order extractOrderFromResultSet(ResultSet rs) throws SQLException {
         return orderItem;
     }
     
-public Map<String, Object> getWeeklyReportData() {
-    Map<String, Object> reportData = new HashMap<>();
-
-    try {
-        // Create day labels for a week
-        String[] dayLabels = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-        reportData.put("labels", dayLabels);
-
-        // Query for order count by day of week
-        int[] orderCounts = new int[dayLabels.length];
-        double[] revenue = new double[dayLabels.length];
-
-        // Get the current date
-        Calendar calendar = Calendar.getInstance();
-        Date now = calendar.getTime();
-
-        // Get start of current week (previous Sunday)
-        Calendar startOfWeekCal = Calendar.getInstance();
-        startOfWeekCal.setTime(now);
-        int dayOfWeek = startOfWeekCal.get(Calendar.DAY_OF_WEEK);
-        startOfWeekCal.add(Calendar.DAY_OF_MONTH, -(dayOfWeek - 1));
-        startOfWeekCal.set(Calendar.HOUR_OF_DAY, 0);
-        startOfWeekCal.set(Calendar.MINUTE, 0);
-        startOfWeekCal.set(Calendar.SECOND, 0);
-        startOfWeekCal.set(Calendar.MILLISECOND, 0);
-        
-        // Convert to java.sql.Date for database compatibility
-        java.sql.Date sqlStartDate = new java.sql.Date(startOfWeekCal.getTimeInMillis());
-
-        String sql = "SELECT DAYOFWEEK(order_date) as day_of_week, COUNT(*) as count, SUM(total_amount) as total " +
-                    "FROM orders " +
-                    "WHERE order_date >= ? " +
-                    "GROUP BY DAYOFWEEK(order_date) " +
-                    "ORDER BY DAYOFWEEK(order_date)";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            // Use setDate instead of setString for date comparison
-            stmt.setDate(1, sqlStartDate);
-            
-            System.out.println("Executing weekly data query with start date: " + sqlStartDate);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    int dayOfWeekIndex = rs.getInt("day_of_week") - 1; // SQL returns 1-7 for Sun-Sat
-                    int count = rs.getInt("count");
-                    double total = rs.getDouble("total");
-                    
-                    System.out.println("Day " + dayOfWeekIndex + " (from DB day " + rs.getInt("day_of_week") + 
-                                       "): Count=" + count + ", Total=" + total);
-
-                    if (dayOfWeekIndex >= 0 && dayOfWeekIndex < dayLabels.length) {
-                        orderCounts[dayOfWeekIndex] += count;
-                        revenue[dayOfWeekIndex] += total;
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error in first query of getWeeklyReportData: " + e.getMessage());
-            e.printStackTrace();
-            throw e; // Re-throw to be caught by outer try-catch
-        }
-
-        reportData.put("orders", orderCounts);
-        reportData.put("revenue", revenue);
-
-        // Query for total orders and revenue for the week
-        int totalOrders = 0;
-        double totalRev = 0;
-
-        sql = "SELECT COUNT(*) as total_orders, SUM(total_amount) as total_revenue " +
-              "FROM orders " +
-              "WHERE order_date >= ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            // Use setDate here as well
-            stmt.setDate(1, sqlStartDate);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    totalOrders = rs.getInt("total_orders");
-                    totalRev = rs.getDouble("total_revenue");
-                    System.out.println("Total orders: " + totalOrders + ", Total revenue: " + totalRev);
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error in summary query of getWeeklyReportData: " + e.getMessage());
-            e.printStackTrace();
-            throw e; // Re-throw to be caught by outer try-catch
-        }
-
-        // Add summary
-        double avgOrderValue = totalOrders > 0 ? totalRev / totalOrders : 0;
-
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("orders", totalOrders);
-        summary.put("revenue", totalRev);
-        summary.put("avg", avgOrderValue);
-        
-        // Add change percentages if available (compare to previous week)
-        // This is just placeholder data for now
-        summary.put("ordersChange", 12.5);  // Example: 12.5% increase
-        summary.put("revenueChange", 15.2); // Example: 15.2% increase
-        summary.put("avgChange", 3.0);      // Example: 3% increase
-
-        reportData.put("summary", summary);
-
-    } catch (Exception e) {
-        System.err.println("Error in getWeeklyReportData: " + e.getMessage());
-        e.printStackTrace();
-        
-        // Provide fallback data so the UI doesn't break
-        reportData.put("labels", new String[]{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"});
-        reportData.put("orders", new int[]{0, 0, 0, 0, 0, 0, 0});
-        reportData.put("revenue", new double[]{0, 0, 0, 0, 0, 0, 0});
-        
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("orders", 0);
-        summary.put("revenue", 0.0);
-        summary.put("avg", 0.0);
-        summary.put("ordersChange", 0.0);
-        summary.put("revenueChange", 0.0);
-        summary.put("avgChange", 0.0);
-        
-        reportData.put("summary", summary);
-    }
-
-    return reportData;
-}
-    
-/**
- * Get monthly report data
- * @return Map containing the report data
+    /**
+ * Get revenue data between two dates
+ * @param startDate Start date
+ * @param endDate End date  
+ * @return Map with dates as keys and revenue as values
  */
-public Map<String, Object> getMonthlyReportData() {
-    Map<String, Object> reportData = new HashMap<>();
+public Map<String, Double> getRevenueBetweenDates(Date startDate, Date endDate) {
+    Map<String, Double> revenueData = new LinkedHashMap<>(); // LinkedHashMap to maintain order
     
-    try {
-        // Create month labels
-        String[] monthLabels = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-        reportData.put("labels", monthLabels);
+    String sql = "SELECT DATE(order_date) as date, SUM(total_amount) as revenue " +
+                "FROM orders " +
+                "WHERE order_date BETWEEN ? AND ? " +
+                "GROUP BY DATE(order_date) " +
+                "ORDER BY date";
+    
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+        stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
         
-        // Query for order count by month
-        int[] orderCounts = new int[monthLabels.length];
-        double[] revenue = new double[monthLabels.length];
-        
-        // Get current year
-        Calendar calendar = Calendar.getInstance();
-        int currentYear = calendar.get(Calendar.YEAR);
-        
-        String sql = "SELECT MONTH(order_date) as month, COUNT(*) as count, SUM(total_amount) as total " +
-                     "FROM orders " +
-                     "WHERE YEAR(order_date) = ? " +
-                     "GROUP BY MONTH(order_date)";
-        
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, currentYear);
-            
-            System.out.println("Executing monthly data query for year: " + currentYear);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    int month = rs.getInt("month");
-                    int count = rs.getInt("count");
-                    double total = rs.getDouble("total");
-                    
-                    System.out.println("Month " + month + ": Count=" + count + ", Total=" + total);
-                    
-                    // Adjust for 0-based array
-                    if (month > 0 && month <= monthLabels.length) {
-                        orderCounts[month - 1] = count;
-                        revenue[month - 1] = total;
-                    }
-                }
+        try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                String date = rs.getDate("date").toString();
+                double revenue = rs.getDouble("revenue");
+                
+                // Print for debugging
+                System.out.printf("Revenue data: %s - $%.2f%n", date, revenue);
+                
+                revenueData.put(date, revenue);
             }
         }
-        
-        reportData.put("orders", orderCounts);
-        reportData.put("revenue", revenue);
-        
-        // Query for total orders and revenue for the year
-        int totalOrders = 0;
-        double totalRev = 0;
-        
-        sql = "SELECT COUNT(*) as total_orders, SUM(total_amount) as total_revenue " +
-              "FROM orders " +
-              "WHERE YEAR(order_date) = ?";
-        
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, currentYear);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    totalOrders = rs.getInt("total_orders");
-                    totalRev = rs.getDouble("total_revenue");
-                    System.out.println("Total orders for year " + currentYear + ": " + totalOrders + 
-                                       ", Total revenue: " + totalRev);
-                }
-            }
-        }
-        
-        // Add summary
-        double avgOrderValue = totalOrders > 0 ? totalRev / totalOrders : 0;
-        
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("orders", totalOrders);
-        summary.put("revenue", totalRev);
-        summary.put("avg", avgOrderValue);
-        
-        // Add change percentages if available
-        summary.put("ordersChange", 8.3);  // Example data
-        summary.put("revenueChange", 12.7);
-        summary.put("avgChange", 4.2);
-        
-        reportData.put("summary", summary);
-        
-    } catch (Exception e) {
-        System.err.println("Error in getMonthlyReportData: " + e.getMessage());
+    } catch (SQLException e) {
+        System.err.println("Error getting revenue data: " + e.getMessage());
         e.printStackTrace();
-        
-        // Provide fallback data
-        reportData.put("labels", new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"});
-        reportData.put("orders", new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-        reportData.put("revenue", new double[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-        
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("orders", 0);
-        summary.put("revenue", 0.0);
-        summary.put("avg", 0.0);
-        summary.put("ordersChange", 0.0);
-        summary.put("revenueChange", 0.0);
-        summary.put("avgChange", 0.0);
-        
-        reportData.put("summary", summary);
     }
     
-    return reportData;
+    return revenueData;
 }
 
 /**
- * Get yearly report data
- * @return Map containing the report data
+ * Get most popular products between two dates
+ * @param startDate Start date
+ * @param endDate End date
+ * @param limit Number of products to return
+ * @return List of maps containing product data
  */
-public Map<String, Object> getYearlyReportData() {
-    Map<String, Object> reportData = new HashMap<>();
+public List<Map<String, Object>> getMostPopularProductsBetweenDates(Date startDate, Date endDate, int limit) {
+    List<Map<String, Object>> popularProducts = new ArrayList<>();
     
-    try {
-        // Get current year
-        Calendar calendar = Calendar.getInstance();
-        int currentYear = calendar.get(Calendar.YEAR);
+    String sql = "SELECT p.product_id, p.name, p.image_path, SUM(oi.quantity) as total_quantity, " +
+                "SUM(oi.price * oi.quantity) as total_revenue " +
+                "FROM orderitems oi " +
+                "JOIN products p ON oi.product_id = p.product_id " +
+                "JOIN orders o ON oi.order_id = o.order_id " +
+                "WHERE o.order_date BETWEEN ? AND ? " +
+                "GROUP BY p.product_id, p.name " +
+                "ORDER BY total_quantity DESC " +
+                "LIMIT ?";
+    
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+        stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+        stmt.setInt(3, limit);
         
-        // Create year labels (5 years back + current year)
-        String[] yearLabels = new String[6];
-        int[] orderCounts = new int[6];
-        double[] revenue = new double[6];
-        
-        for (int i = 0; i < yearLabels.length; i++) {
-            yearLabels[i] = String.valueOf(currentYear - 5 + i);
-        }
-        
-        reportData.put("labels", yearLabels);
-        
-        // Query for order count by year
-        String sql = "SELECT YEAR(order_date) as year, COUNT(*) as count, SUM(total_amount) as total " +
-                     "FROM orders " +
-                     "WHERE YEAR(order_date) >= ? " +
-                     "GROUP BY YEAR(order_date)";
-        
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, currentYear - 5);
-            
-            System.out.println("Executing yearly data query from year: " + (currentYear - 5));
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    int year = rs.getInt("year");
-                    int count = rs.getInt("count");
-                    double total = rs.getDouble("total");
-                    
-                    System.out.println("Year " + year + ": Count=" + count + ", Total=" + total);
-                    
-                    // Find index in array
-                    int index = year - (currentYear - 5);
-                    if (index >= 0 && index < yearLabels.length) {
-                        orderCounts[index] = count;
-                        revenue[index] = total;
-                    }
-                }
+        try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                Map<String, Object> product = new HashMap<>();
+                product.put("productId", rs.getInt("product_id"));
+                product.put("name", rs.getString("name"));
+                product.put("imagePath", rs.getString("image_path"));
+                product.put("totalQuantity", rs.getInt("total_quantity"));
+                product.put("totalRevenue", rs.getDouble("total_revenue"));
+                
+                // Print for debugging
+                System.out.printf("Popular product: %s - Qty: %d, Revenue: $%.2f%n", 
+                    rs.getString("name"), rs.getInt("total_quantity"), rs.getDouble("total_revenue"));
+                
+                popularProducts.add(product);
             }
         }
-        
-        reportData.put("orders", orderCounts);
-        reportData.put("revenue", revenue);
-        
-        // Query for total orders and revenue for the entire period
-        int totalOrders = 0;
-        double totalRev = 0;
-        
-        sql = "SELECT COUNT(*) as total_orders, SUM(total_amount) as total_revenue " +
-              "FROM orders " +
-              "WHERE YEAR(order_date) >= ?";
-        
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, currentYear - 5);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    totalOrders = rs.getInt("total_orders");
-                    totalRev = rs.getDouble("total_revenue");
-                    System.out.println("Total orders for all years: " + totalOrders + 
-                                       ", Total revenue: " + totalRev);
-                }
-            }
-        }
-        
-        // Add summary
-        double avgOrderValue = totalOrders > 0 ? totalRev / totalOrders : 0;
-        
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("orders", totalOrders);
-        summary.put("revenue", totalRev);
-        summary.put("avg", avgOrderValue);
-        
-        // Add change percentages if available
-        summary.put("ordersChange", 15.8);  // Example data
-        summary.put("revenueChange", 22.3);
-        summary.put("avgChange", 5.6);
-        
-        reportData.put("summary", summary);
-        
-    } catch (Exception e) {
-        System.err.println("Error in getYearlyReportData: " + e.getMessage());
+    } catch (SQLException e) {
+        System.err.println("Error getting popular products: " + e.getMessage());
         e.printStackTrace();
-        
-        // Provide fallback data
-        Calendar calendar = Calendar.getInstance();
-        int currentYear = calendar.get(Calendar.YEAR);
-        String[] yearLabels = new String[6];
-        for (int i = 0; i < yearLabels.length; i++) {
-            yearLabels[i] = String.valueOf(currentYear - 5 + i);
-        }
-        
-        reportData.put("labels", yearLabels);
-        reportData.put("orders", new int[]{0, 0, 0, 0, 0, 0});
-        reportData.put("revenue", new double[]{0, 0, 0, 0, 0, 0});
-        
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("orders", 0);
-        summary.put("revenue", 0.0);
-        summary.put("avg", 0.0);
-        summary.put("ordersChange", 0.0);
-        summary.put("revenueChange", 0.0);
-        summary.put("avgChange", 0.0);
-        
-        reportData.put("summary", summary);
     }
     
-    return reportData;
+    return popularProducts;
 }
- 
+
     /**
-     * Get category distribution data
-     * @return Map containing category distribution data
+     * Get total sales info between dates
+     * @param startDate Start date
+     * @param endDate End date
+     * @return Map with sales summary data
      */
-    public Map<String, Object> getCategoryData() {
-        Map<String, Object> categoryData = new HashMap<>();
-        
+    public Map<String, Object> getSalesSummaryBetweenDates(Date startDate, Date endDate) {
+        Map<String, Object> summary = new HashMap<>();
+
+        String totalRevenueSql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE order_date BETWEEN ? AND ?";
+        String totalOrdersSql = "SELECT COUNT(*) as total_orders FROM orders WHERE order_date BETWEEN ? AND ?";
+        String totalItemsSql = "SELECT SUM(oi.quantity) as total_items FROM orderitems oi " +
+                              "JOIN orders o ON oi.order_id = o.order_id " +
+                              "WHERE o.order_date BETWEEN ? AND ?";
+        String avgOrderValueSql = "SELECT AVG(total_amount) as avg_order FROM orders WHERE order_date BETWEEN ? AND ?";
+
         try {
-            // Validate connection
-            if (conn == null || conn.isClosed()) {
-                conn = DBUtil.getConnection();
-                if (conn == null) {
-                    throw new SQLException("Failed to establish database connection");
-                }
-            }
-            
-            // Query to get revenue by category
-            String sql = "SELECT p.category, SUM(oi.price * oi.quantity) AS total " +
-                         "FROM orderitems oi " +
-                         "JOIN products p ON oi.product_id = p.product_id " +
-                         "GROUP BY p.category " +
-                         "ORDER BY total DESC";
-            
-            try (Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(sql)) {
-                
-                List<String> labels = new ArrayList<>();
-                List<Double> values = new ArrayList<>();
-                double totalRevenue = 0;
-                
-                while (rs.next()) {
-                    String category = rs.getString("category");
-                    double total = rs.getDouble("total");
-                    
-                    labels.add(category);
-                    values.add(total);
-                    totalRevenue += total;
-                }
-                
-                // Convert values to percentages
-                double[] percentages = new double[values.size()];
-                for (int i = 0; i < values.size(); i++) {
-                    if (totalRevenue > 0) {
-                        percentages[i] = (values.get(i) / totalRevenue) * 100;
-                    } else {
-                        percentages[i] = 0.0;
+            // Get total revenue
+            try (PreparedStatement stmt = conn.prepareStatement(totalRevenueSql)) {
+                stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+                stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        double totalRevenue = rs.getDouble("total_revenue");
+                        summary.put("totalRevenue", totalRevenue);
+                        System.out.printf("Total revenue: $%.2f%n", totalRevenue);
                     }
                 }
-                
-                categoryData.put("labels", labels.toArray(new String[0]));
-                categoryData.put("data", percentages);
-                
             }
-        } catch (SQLException e) {
-            System.err.println("Error getting category data: " + e.getMessage());
-            e.printStackTrace();
-            
-            // Provide fallback data
-            categoryData.put("labels", new String[]{"Electronics", "Clothing", "Home & Garden", "Sports"});
-            categoryData.put("data", new double[]{40.0, 25.0, 20.0, 15.0});
-        }
-        
-        return categoryData;
-    }
-    
-    /**
-     * Get top products data
-     * @return Map containing top products data
-     */
-    public Map<String, Object> getTopProductsData() {
-        Map<String, Object> topProductsData = new HashMap<>();
-        
-        try {
-            // Validate connection
-            if (conn == null || conn.isClosed()) {
-                conn = DBUtil.getConnection();
-                if (conn == null) {
-                    throw new SQLException("Failed to establish database connection");
-                }
-            }
-            
-            // Query to get top 5 products by sales
-            String sql = "SELECT p.name, SUM(oi.quantity) as qty " +
-                         "FROM orderitems oi " +
-                         "JOIN products p ON oi.product_id = p.product_id " +
-                         "GROUP BY p.product_id " +
-                         "ORDER BY qty DESC " +
-                         "LIMIT 5";
-            
-            try (Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(sql)) {
-                
-                List<String> labels = new ArrayList<>();
-                List<Integer> values = new ArrayList<>();
-                int totalQty = 0;
-                
-                while (rs.next()) {
-                    String productName = rs.getString("name");
-                    int qty = rs.getInt("qty");
-                    
-                    labels.add(productName);
-                    values.add(qty);
-                    totalQty += qty;
-                }
-                
-                // Convert to percentages
-                double[] percentages = new double[values.size()];
-                for (int i = 0; i < values.size(); i++) {
-                    if (totalQty > 0) {
-                        percentages[i] = (values.get(i).doubleValue() / totalQty) * 100;
-                    } else {
-                        percentages[i] = 0.0;
+
+            // Get total orders
+            try (PreparedStatement stmt = conn.prepareStatement(totalOrdersSql)) {
+                stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+                stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        int totalOrders = rs.getInt("total_orders");
+                        summary.put("totalOrders", totalOrders);
+                        System.out.printf("Total orders: %d%n", totalOrders);
                     }
                 }
-                
-                topProductsData.put("labels", labels.toArray(new String[0]));
-                topProductsData.put("data", percentages);
-                
             }
+
+            // Get total items sold
+            try (PreparedStatement stmt = conn.prepareStatement(totalItemsSql)) {
+                stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+                stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        int totalItems = rs.getInt("total_items");
+                        summary.put("totalItems", totalItems);
+                        System.out.printf("Total items sold: %d%n", totalItems);
+                    }
+                }
+            }
+
+            // Get average order value
+            try (PreparedStatement stmt = conn.prepareStatement(avgOrderValueSql)) {
+                stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+                stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        double avgOrder = rs.getDouble("avg_order");
+                        summary.put("avgOrderValue", avgOrder);
+                        System.out.printf("Average order value: $%.2f%n", avgOrder);
+                    }
+                }
+            }
+
         } catch (SQLException e) {
-            System.err.println("Error getting top products data: " + e.getMessage());
+            System.err.println("Error getting sales summary: " + e.getMessage());
             e.printStackTrace();
-            
-            // Provide fallback data based on products in database
-            topProductsData.put("labels", new String[]{"Wireless Bluetooth Headphones", "Portable Bluetooth Speaker", "Men's Cotton T-Shirt", "Ceramic Coffee Mug", "Yoga Mat"});
-            topProductsData.put("data", new double[]{25.0, 20.0, 15.0, 12.0, 10.0});
         }
-        
-        return topProductsData;
+
+        return summary;
     }
+
 }
