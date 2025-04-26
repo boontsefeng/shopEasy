@@ -1,4 +1,4 @@
-package com.shopeasy.shopeasy.util;
+    package com.shopeasy.shopeasy.util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,7 +10,7 @@ public class DBUtil {
 
     private static final String URL = "jdbc:mysql://localhost:3306/shopeasy?useSSL=false&serverTimezone=UTC";
     private static final String USER = "root";
-    private static final String PASSWORD = "Shah123"; // Updated with your actual MySQL password
+    private static final String PASSWORD = "1234"; // Updated with your actual MySQL password
 
     public static Connection getConnection() throws SQLException {
         try {

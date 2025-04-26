@@ -416,4 +416,48 @@ public class UserDAO {
            }
            return 0;
        }
+    
+        /**
+         * Get user by phone number
+         * @param phoneNumber User's phone number
+         * @return User object if found, null otherwise
+         */
+        public User getUserByPhoneNumber(String phoneNumber) {
+            // First try exact match
+            String sql = "SELECT * FROM users WHERE contact_number = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, phoneNumber);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        System.out.println("Found user with exact phone match: " + phoneNumber);
+                        return extractUserFromResultSet(rs);
+                    }
+                }
+
+                // If no exact match, try with LIKE for partial matches
+                // This helps when the phone number format might differ (with/without country code)
+                sql = "SELECT * FROM users WHERE contact_number LIKE ?";
+                try (PreparedStatement likeStmt = conn.prepareStatement(sql)) {
+                    // Remove any leading '+' for the search
+                    String searchTerm = phoneNumber.replace("+", "");
+
+                    // Search for the phone number at the end of the string (this catches numbers with/without country code)
+                    likeStmt.setString(1, "%" + searchTerm);
+
+                    try (ResultSet likeRs = likeStmt.executeQuery()) {
+                        if (likeRs.next()) {
+                            System.out.println("Found user with partial phone match: " + phoneNumber);
+                            return extractUserFromResultSet(likeRs);
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("Error getting user by phone number: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            System.out.println("No user found with phone number: " + phoneNumber);
+            return null;
+        }
 }

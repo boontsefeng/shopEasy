@@ -12,6 +12,15 @@
     <!-- Add animate.css for animations -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body, html {
+            font-family: 'Poppins', sans-serif
+        }
+
+        * {
+            font-family: 'Poppins', sans-serif
+        }
         .login-container {
             background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -112,6 +121,11 @@
                             Don't have an account? Register
                         </a>
                     </div>
+                    <div class="text-sm">
+                        <a href="#" id="forgotPasswordLink" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+                            Forgot password?
+                        </a>
+                    </div>
                 </div>
             </form>
         </div>
@@ -123,6 +137,16 @@
         document.addEventListener('DOMContentLoaded', function() {
             const formContainer = document.querySelector('.form-container');
             formContainer.classList.add('animate__animated', 'animate__fadeIn');
+            
+            // Forgot password link handler - pass the username to the forgot password page
+            const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+            if (forgotPasswordLink) {
+                forgotPasswordLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const username = document.getElementById('username').value;
+                    window.location.href = 'forgotPassword' + (username ? '?username=' + encodeURIComponent(username) : '');
+                });
+            }
         });
     </script>
 </body>

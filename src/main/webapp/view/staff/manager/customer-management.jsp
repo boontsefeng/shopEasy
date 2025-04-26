@@ -531,5 +531,3 @@
             });
     }
 </script>
-
-<%@ include file="../dashboard-template-footer.jsp" %> 
