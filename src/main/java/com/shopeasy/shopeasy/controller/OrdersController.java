@@ -283,28 +283,46 @@ public class OrdersController extends HttpServlet {
                     String orderIdParam = request.getParameter("orderId");
                     String newStatus = request.getParameter("status");
                     
+                    System.out.println("Received request to update order status: orderID=" + orderIdParam + ", newStatus=" + newStatus);
+                    
                     if (orderIdParam == null || newStatus == null || orderIdParam.trim().isEmpty() || newStatus.trim().isEmpty()) {
                         String errorJson = "{\"success\":false,\"message\":\"Missing order ID or status\"}";
                         response.setContentLength(errorJson.getBytes("UTF-8").length);
                         response.getWriter().write(errorJson);
+                        System.out.println("Error updating order status: Missing order ID or status parameters");
                         return;
                     }
                     
                     int orderId = Integer.parseInt(orderIdParam);
                     
+                    // Verify the order exists before updating
+                    Order order = orderDAO.getOrderById(orderId);
+                    if (order == null) {
+                        String errorJson = "{\"success\":false,\"message\":\"Order not found with ID: " + orderId + "\"}";
+                        response.setContentLength(errorJson.getBytes("UTF-8").length);
+                        response.getWriter().write(errorJson);
+                        System.out.println("Error updating order status: Order not found with ID " + orderId);
+                        return;
+                    }
+                    
+                    System.out.println("Updating order " + orderId + " from status '" + order.getStatus() + "' to '" + newStatus + "'");
+                    
                     // Update order status
                     boolean success = orderDAO.updateOrderStatus(orderId, newStatus);
                     
                     if (success) {
+                        System.out.println("Successfully updated order " + orderId + " to status '" + newStatus + "'");
                         String successJson = "{\"success\":true,\"message\":\"Order status updated successfully\"}";
                         response.setContentLength(successJson.getBytes("UTF-8").length);
                         response.getWriter().write(successJson);
                     } else {
+                        System.out.println("Failed to update order " + orderId + " to status '" + newStatus + "' - database update returned false");
                         String errorJson = "{\"success\":false,\"message\":\"Failed to update order status\"}";
                         response.setContentLength(errorJson.getBytes("UTF-8").length);
                         response.getWriter().write(errorJson);
                     }
                 } catch (NumberFormatException e) {
+                    System.err.println("Error parsing order ID: " + e.getMessage());
                     String errorJson = "{\"success\":false,\"message\":\"Invalid order ID format\"}";
                     response.setContentLength(errorJson.getBytes("UTF-8").length);
                     response.getWriter().write(errorJson);

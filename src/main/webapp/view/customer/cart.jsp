@@ -163,9 +163,13 @@
                                     <span class="font-medium text-gray-700">Shipping:</span>
                                     <span class="font-medium text-gray-900">FREE</span>
                                 </div>
+                                <div class="flex justify-between mb-3">
+                                    <span class="font-medium text-gray-700">Tax (6% GST):</span>
+                                    <span class="font-medium text-gray-900">RM${cartTotal * 0.06}</span>
+                                </div>
                                 <div class="flex justify-between text-lg border-t pt-3 border-gray-200">
                                     <span class="font-bold text-gray-900">Total:</span>
-                                    <span class="font-bold text-indigo-600">RM${cartTotal}</span>
+                                    <span class="font-bold text-indigo-600">RM${cartTotal * 1.06}</span>
                                 </div>
                                 
                                 <div class="mt-6">

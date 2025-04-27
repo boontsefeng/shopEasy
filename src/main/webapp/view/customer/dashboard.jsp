@@ -28,7 +28,105 @@
         }
         
         .product-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .product-image {
+            height: 180px; /* Increased from h-48 (192px) but with better proportion */
+            object-fit: contain; /* Changed from cover to contain to show full product */
+            padding: 10px; /* Add padding to prevent image from touching edges */
+        }
+        
+        .product-title {
+            font-size: 0.95rem; /* Smaller than text-lg */
+            line-height: 1.3;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+        }
+        
+        .product-description {
+            font-size: 0.8rem;
+            line-height: 1.3;
+            margin-bottom: 0.5rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .product-price {
+            font-size: 0.95rem;
+        }
+        
+        .add-to-cart-btn {
+            font-size: 0.75rem;
+            padding: 0.3rem 0.75rem;
+        }
+        
+        .discount-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ef4444;
+            color: white;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .original-price {
+            text-decoration: line-through;
+            color: #9ca3af;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+        }
+        
+        .sale-banner {
+            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .sale-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='52' height='26' viewBox='0 0 52 26' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.3;
+        }
+        
+        .sale-badge {
+            position: absolute;
+            top: -10px;
+            right: 30px;
+            background-color: #eab308;
+            color: white;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: rotate(5deg);
+        }
+        
+        @keyframes pulse-scale {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        
+        .pulse-animation {
+            animation: pulse-scale 2s infinite;
         }
     </style>
 </head>
@@ -47,6 +145,29 @@
                    class="inline-block bg-white text-indigo-600 px-6 py-3 rounded-full font-medium hover:bg-gray-100 transition duration-300 animate__animated animate__bounceIn animate__delay-1s">
                     Shop Now <i class="fas fa-arrow-right ml-2"></i>
                 </a>
+            </div>
+        </section>
+        
+        <!-- Raya Sale Banner -->
+        <section class="mb-8">
+            <div class="sale-banner p-6 relative">
+                <div class="sale-badge text-lg">50% OFF</div>
+                <div class="flex flex-col md:flex-row items-center justify-between">
+                    <div class="mb-4 md:mb-0 md:mr-8">
+                        <h2 class="text-3xl font-bold text-white mb-2">Raya Special Deals!</h2>
+                        <p class="text-white text-opacity-90 mb-4">Limited time offer on select products. Hurry and grab your favorites before they're gone!</p>
+                        <a href="${pageContext.request.contextPath}/customer/raya-discounts" 
+                           class="inline-block bg-white text-red-600 px-6 py-2 rounded-full font-medium hover:bg-red-50 transition pulse-animation">
+                            Shop Raya Deals <i class="fas fa-tag ml-1"></i>
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <img src="${pageContext.request.contextPath}/assets/Men's Cotton T-Shirt.png" alt="T-Shirt" class="w-16 h-16 object-cover rounded-lg border-2 border-white">
+                        <img src="${pageContext.request.contextPath}/assets/Ceramic Coffee Mug.jpg" alt="Coffee Mug" class="w-16 h-16 object-cover rounded-lg border-2 border-white">
+                        <img src="${pageContext.request.contextPath}/assets/LED Desk Lamp.png" alt="Desk Lamp" class="w-16 h-16 object-cover rounded-lg border-2 border-white">
+                        <img src="${pageContext.request.contextPath}/assets/Yoga Mat.jpg" alt="Yoga Mat" class="w-16 h-16 object-cover rounded-lg border-2 border-white">
+                    </div>
+                </div>
             </div>
         </section>
         
@@ -75,21 +196,36 @@
                 </a>
             </div>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 <c:forEach items="${featuredProducts}" var="product" end="7">
-                    <div class="product-card bg-white rounded-lg shadow overflow-hidden">
-                        <img src="${pageContext.request.contextPath}/${product.imagePath}" 
-                             alt="${product.name}" 
-                             class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <h3 class="text-lg font-medium text-gray-800 mb-2">${product.name}</h3>
-                            <p class="text-gray-600 text-sm mb-3 line-clamp-2">${product.description}</p>
-                            <div class="flex justify-between items-center">
-                                <span class="text-indigo-600 font-bold">RM${product.price}</span>
-                                <a href="${pageContext.request.contextPath}/customer/product/details?id=${product.productId}" 
-                                   class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 transition">
-                                    View Details
-                                </a>
+                    <div class="product-card bg-white rounded-lg shadow overflow-hidden h-full flex flex-col">
+                        <a href="${pageContext.request.contextPath}/customer/product/details?id=${product.productId}" class="block relative">
+                            <c:if test="${product.discounted}">
+                                <span class="discount-badge">-50%</span>
+                            </c:if>
+                            <img src="${pageContext.request.contextPath}/${product.imagePath}" 
+                                 alt="${product.name}" 
+                                 class="w-full product-image">
+                        </a>
+                        <div class="p-3 flex-grow flex flex-col">
+                            <a href="${pageContext.request.contextPath}/customer/product/details?id=${product.productId}" 
+                               class="block">
+                                <h3 class="product-title text-gray-800">${product.name}</h3>
+                            </a>
+                            <p class="product-description text-gray-600">${product.description}</p>
+                            <div class="mt-auto">
+                                <div class="flex justify-between items-center mt-2">
+                                    <span class="product-price text-indigo-600 font-bold">
+                                        <c:if test="${product.discounted}">
+                                            <span class="original-price">RM${product.originalPrice}</span>
+                                        </c:if>
+                                        RM${product.price}
+                                    </span>
+                                    <a href="${pageContext.request.contextPath}/customer/product/details?id=${product.productId}" 
+                                       class="add-to-cart-btn bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+                                       View Details
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>

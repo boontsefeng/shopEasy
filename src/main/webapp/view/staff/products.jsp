@@ -88,7 +88,7 @@
     <div class="p-4 bg-blue-500 text-white flex justify-between items-center">
         <h2 class="text-lg font-semibold">Manage Products</h2>
         <div class="flex space-x-2">
-            <button onclick="openAddProductModal()" class="bg-white text-blue-500 hover:bg-blue-50 py-1 px-3 rounded-full text-sm font-medium flex items-center transition-colors">
+            <button type="button" id="addProductBtn" class="bg-white text-blue-500 hover:bg-blue-50 py-1 px-3 rounded-full text-sm font-medium flex items-center transition-colors">
                 <i class="fas fa-plus mr-1"></i> Add New Product
             </button>
         </div>
@@ -171,7 +171,7 @@
                                 <i class="fas fa-box-open text-gray-300 text-5xl mb-4"></i>
                                 <p class="text-gray-500 font-medium">No products found</p>
                                 <p class="text-gray-400 text-sm">Add a new product to get started</p>
-                                <button onclick="openAddProductModal()" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600">
+                                <button type="button" class="add-product-btn mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600">
                                     <i class="fas fa-plus mr-2"></i> Add New Product
                                 </button>
                             </div>
@@ -191,10 +191,10 @@
                             <div class="h-12 w-12 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
                                 <c:choose>
                                     <c:when test="${not empty product.imagePath}">
-                                        <img src="${pageContext.request.contextPath}/view/${product.imagePath}" 
+                                        <img src="${pageContext.request.contextPath}/${product.imagePath}" 
                                              alt="${product.name}" 
                                              class="h-full w-full object-cover"
-                                             onerror="this.onerror=null; this.src='${pageContext.request.contextPath}/view/assets/productplaceholder.png'; console.log('Image failed to load: ${product.imagePath}')">
+                                             onerror="this.onerror=null; this.src='${pageContext.request.contextPath}/assets/productplaceholder.png'; console.log('Image failed to load: ${product.imagePath}')">
                                     </c:when>
                                     <c:otherwise>
                                         <i class="fas fa-box text-gray-400"></i>
@@ -228,26 +228,27 @@
                                     </span>
                                 </c:otherwise>
                             </c:choose>
-                            <button data-action="restock" 
+                            <a href="#" data-action="restock" 
                                     data-product-id="${product.productId}" 
                                     data-product-name="${product.name}" 
                                     data-product-quantity="${product.quantity}"
                                     class="ml-2 text-indigo-600 hover:text-indigo-900 transition-colors text-xs">
                                 <i class="fas fa-plus-circle"></i> Restock
-                            </button>
+                            </a>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-3">
-                                <button data-action="quick-edit"
+                                <a href="#" data-action="quick-edit"
                                         data-product-id="${product.productId}" 
                                         data-product-name="${product.name}" 
                                         data-product-category="${product.category}" 
                                         data-product-price="${product.price}" 
                                         data-product-quantity="${product.quantity}"
-                                        class="text-blue-600 hover:text-blue-900 transition-colors fas fa-edit" 
+                                        class="text-blue-600 hover:text-blue-900 transition-colors" 
                                         title="Quick Edit">
-                                </button>
-                                <button data-action="full-edit"
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="#" data-action="full-edit"
                                         data-product-id="${product.productId}" 
                                         data-product-name="${product.name}" 
                                         data-product-category="${product.category}" 
@@ -255,15 +256,17 @@
                                         data-product-quantity="${product.quantity}"
                                         data-product-description="${product.description}" 
                                         data-product-image="${product.imagePath}"
-                                        class="text-indigo-600 hover:text-indigo-900 transition-colors fas fa-sliders-h" 
+                                        class="text-indigo-600 hover:text-indigo-900 transition-colors" 
                                         title="Full Edit">
-                                </button>
-                                <button data-action="delete"
+                                    <i class="fas fa-sliders-h"></i>
+                                </a>
+                                <a href="#" data-action="delete"
                                         data-product-id="${product.productId}" 
                                         data-product-name="${product.name}"
-                                        class="text-red-600 hover:text-red-900 transition-colors fas fa-trash" 
+                                        class="text-red-600 hover:text-red-900 transition-colors" 
                                         title="Delete">
-                                </button>
+                                    <i class="fas fa-trash"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>
@@ -571,6 +574,22 @@
     
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM fully loaded - initializing all handlers");
+        
+        // Explicitly handle Add Product buttons
+        document.getElementById('addProductBtn')?.addEventListener('click', function(e) {
+            console.log("Add Product button clicked via ID");
+            openAddProductModal();
+        });
+        
+        // Also handle any buttons with the add-product-btn class
+        document.querySelectorAll('.add-product-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                console.log("Add Product button clicked via class");
+                openAddProductModal();
+            });
+        });
+        
         // Log application path for debugging
         console.log("Application context path: " + "${pageContext.request.contextPath}");
         
@@ -608,6 +627,27 @@
             setupPagination();
             showPage(1);
         }
+        
+        // Set up all modal close buttons
+        Object.entries(modalCloseMap).forEach(([buttonId, modalId]) => {
+            const button = document.getElementById(buttonId);
+            const modal = document.getElementById(modalId);
+            
+            if (button && modal) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    modal.classList.add('hidden');
+                });
+            }
+        });
+
+        // Initialize all dynamic button event handlers
+        initButtons();
+        
+        // Initialize form handlers
+        setupFormHandlers();
+
+        console.log("All event handlers initialized successfully");
     });
     
     // Toggle sort direction when clicking column headers
@@ -886,7 +926,7 @@
         
         // Show current image if available
         if (imagePath && imagePath !== '') {
-            let imageSrc = '${pageContext.request.contextPath}/view/' + imagePath;
+            let imageSrc = '${pageContext.request.contextPath}/${imagePath}';
             console.log("Loading image: " + imageSrc);
             currentProductImage.src = imageSrc;
             currentProductImage.classList.remove('hidden');
@@ -913,51 +953,74 @@
         
         // Clear the form
         document.getElementById('addProductForm').reset();
+
+        // Set focus on the first input field
+        setTimeout(() => {
+            document.getElementById('addName').focus();
+        }, 100);
     }
     
-    // Modal close handlers
-    document.getElementById('closeModal').addEventListener('click', function() {
-        document.getElementById('deleteModal').classList.add('hidden');
-    });
+    // Modal close handlers (dynamically attach for all modals)
+    const modalCloseMap = {
+        'closeModal': 'deleteModal',
+        'cancelDelete': 'deleteModal',
+        'closeRestockModal': 'restockModal',
+        'cancelRestock': 'restockModal',
+        'closeQuickEditModal': 'quickEditModal',
+        'cancelQuickEdit': 'quickEditModal',
+        'closeAddProductModal': 'addProductModal',
+        'cancelAddProduct': 'addProductModal',
+        'closeFullEditModal': 'fullEditModal',
+        'cancelFullEdit': 'fullEditModal'
+    };
     
-    document.getElementById('cancelDelete').addEventListener('click', function() {
-        document.getElementById('deleteModal').classList.add('hidden');
-    });
+    function initButtons() {
+        // Re-initialize all action buttons event listeners
+        document.querySelectorAll('[data-action]').forEach(button => {
+            const action = button.getAttribute('data-action');
+            
+            // Remove existing listeners first to avoid duplicates
+            button.removeEventListener('click', actionHandler);
+            
+            // Add new listener
+            button.addEventListener('click', actionHandler);
+        });
+    }
     
-    document.getElementById('closeRestockModal').addEventListener('click', function() {
-        document.getElementById('restockModal').classList.add('hidden');
-    });
+    function actionHandler(e) {
+        e.preventDefault();
+        const action = this.getAttribute('data-action');
+        const productId = this.getAttribute('data-product-id');
+        const productName = this.getAttribute('data-product-name');
+        
+        console.log(`Action: ${action}, Product ID: ${productId}, Name: ${productName}`);
+        
+        switch(action) {
+            case 'restock':
+                const quantity = this.getAttribute('data-product-quantity');
+                openRestockModal(productId, productName, quantity);
+                break;
+            case 'quick-edit':
+                const category = this.getAttribute('data-product-category');
+                const price = this.getAttribute('data-product-price');
+                const qty = this.getAttribute('data-product-quantity');
+                openQuickEditModal(productId, productName, category, price, qty);
+                break;
+            case 'full-edit':
+                const cat = this.getAttribute('data-product-category');
+                const prc = this.getAttribute('data-product-price');
+                const q = this.getAttribute('data-product-quantity');
+                const description = this.getAttribute('data-product-description');
+                const imagePath = this.getAttribute('data-product-image');
+                openFullEditModal(productId, productName, cat, prc, q, description, imagePath);
+                break;
+            case 'delete':
+                confirmDelete(productId, productName);
+                break;
+        }
+    }
     
-    document.getElementById('cancelRestock').addEventListener('click', function() {
-        document.getElementById('restockModal').classList.add('hidden');
-    });
-    
-    document.getElementById('closeQuickEditModal').addEventListener('click', function() {
-        document.getElementById('quickEditModal').classList.add('hidden');
-    });
-    
-    document.getElementById('cancelQuickEdit').addEventListener('click', function() {
-        document.getElementById('quickEditModal').classList.add('hidden');
-    });
-    
-    document.getElementById('closeAddProductModal').addEventListener('click', function() {
-        document.getElementById('addProductModal').classList.add('hidden');
-    });
-    
-    document.getElementById('cancelAddProduct').addEventListener('click', function() {
-        document.getElementById('addProductModal').classList.add('hidden');
-    });
-    
-    document.getElementById('closeFullEditModal').addEventListener('click', function() {
-        document.getElementById('fullEditModal').classList.add('hidden');
-    });
-    
-    document.getElementById('cancelFullEdit').addEventListener('click', function() {
-        document.getElementById('fullEditModal').classList.add('hidden');
-    });
-    
-    // Handle form submissions
-    document.addEventListener('DOMContentLoaded', function() {
+    function setupFormHandlers() {
         // Convert price from dollars to cents before submitting quick edit form
         const quickEditForm = document.getElementById('quickEditForm');
         quickEditForm.addEventListener('submit', function(e) {
@@ -994,82 +1057,97 @@
         // Handle restock form
         const restockForm = document.getElementById('restockForm');
         restockForm.addEventListener('submit', function(e) {
-            // If the restock endpoint doesn't exist, use the edit endpoint
-            e.preventDefault();
-            const productId = document.getElementById('restockProductId').value;
-            const newStock = document.getElementById('newStock').value;
-            
-            // Redirect to a URL that will update the stock
-            window.location.href = "${pageContext.request.contextPath}/product/edit?id=" + 
-                                  productId + "&restock=" + newStock;
+            // No need to prevent default anymore - let the form submit normally
+            // The form already has the correct action: ${pageContext.request.contextPath}/product/restock
+            // Just ensure that we're using the newStock value
+            const currentStock = parseInt(document.getElementById('currentStock').value) || 0;
+            const addStock = parseInt(document.getElementById('addStock').value) || 0;
+            document.getElementById('newStock').value = currentStock + addStock;
         });
-    });
-    
-    // Close modals when clicking outside
-    document.addEventListener('click', function(event) {
-        const modals = [
-            {modal: document.getElementById('deleteModal'), content: '.modal-content', trigger: '[onclick^="confirmDelete"]'},
-            {modal: document.getElementById('restockModal'), content: '.modal-content', trigger: '[onclick^="openRestockModal"]'},
-            {modal: document.getElementById('quickEditModal'), content: '.modal-content', trigger: '[onclick^="openQuickEditModal"]'},
-            {modal: document.getElementById('addProductModal'), content: '.modal-content', trigger: '[onclick^="openAddProductModal"]'},
-            {modal: document.getElementById('fullEditModal'), content: '.modal-content', trigger: '[onclick^="openFullEditModal"]'}
-        ];
-        
-        modals.forEach(({modal, content, trigger}) => {
-            if (!modal.classList.contains('hidden')) {
-                const modalContent = modal.querySelector(content);
-                if (!modalContent.contains(event.target) && !event.target.matches(trigger)) {
-                    modal.classList.add('hidden');
-                }
-            }
-        });
-    });
+    }
 
-    // Add event listeners for product action buttons
-    document.addEventListener('DOMContentLoaded', function() {
-        // Restock buttons
-        document.querySelectorAll('[data-action="restock"]').forEach(button => {
-            button.addEventListener('click', function() {
-                const productId = this.getAttribute('data-product-id');
-                const productName = this.getAttribute('data-product-name');
-                const quantity = this.getAttribute('data-product-quantity');
-                openRestockModal(productId, productName, quantity);
-            });
-        });
+    // Add a global click handler as fallback
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element or its parent has a data-action attribute
+        let target = e.target;
+        let actionFound = false;
         
-        // Quick edit buttons
-        document.querySelectorAll('[data-action="quick-edit"]').forEach(button => {
-            button.addEventListener('click', function() {
-                const productId = this.getAttribute('data-product-id');
-                const productName = this.getAttribute('data-product-name');
-                const category = this.getAttribute('data-product-category');
-                const price = this.getAttribute('data-product-price');
-                const quantity = this.getAttribute('data-product-quantity');
-                openQuickEditModal(productId, productName, category, price, quantity);
-            });
-        });
+        // First handle the Add Product button
+        while (target && target !== document) {
+            // Check for specific Add Product buttons
+            if ((target.id === 'addProductBtn') || target.classList.contains('add-product-btn')) {
+                e.preventDefault();
+                console.log("Add Product button clicked via global handler");
+                openAddProductModal();
+                actionFound = true;
+                break;
+            }
+            
+            // Check for data-action buttons
+            if (target.hasAttribute && target.hasAttribute('data-action')) {
+                actionFound = true;
+                const action = target.getAttribute('data-action');
+                
+                // Only handle the click if it's for our product actions
+                if (['restock', 'quick-edit', 'full-edit', 'delete'].includes(action)) {
+                    e.preventDefault();
+                    console.log(`Global handler caught action: ${action}`);
+                    
+                    const productId = target.getAttribute('data-product-id');
+                    const productName = target.getAttribute('data-product-name');
+                    
+                    if (!productId) {
+                        console.error("Missing product ID on action element");
+                        return;
+                    }
+                    
+                    switch(action) {
+                        case 'restock':
+                            const quantity = target.getAttribute('data-product-quantity');
+                            openRestockModal(productId, productName, quantity);
+                            break;
+                        case 'quick-edit':
+                            const category = target.getAttribute('data-product-category');
+                            const price = target.getAttribute('data-product-price');
+                            const qty = target.getAttribute('data-product-quantity');
+                            openQuickEditModal(productId, productName, category, price, qty);
+                            break;
+                        case 'full-edit':
+                            const cat = target.getAttribute('data-product-category');
+                            const prc = target.getAttribute('data-product-price');
+                            const q = target.getAttribute('data-product-quantity');
+                            const description = target.getAttribute('data-product-description');
+                            const imagePath = target.getAttribute('data-product-image');
+                            openFullEditModal(productId, productName, cat, prc, q, description, imagePath);
+                            break;
+                        case 'delete':
+                            confirmDelete(productId, productName);
+                            break;
+                    }
+                }
+                break;
+            }
+            target = target.parentElement;
+        }
         
-        // Full edit buttons
-        document.querySelectorAll('[data-action="full-edit"]').forEach(button => {
-            button.addEventListener('click', function() {
-                const productId = this.getAttribute('data-product-id');
-                const productName = this.getAttribute('data-product-name');
-                const category = this.getAttribute('data-product-category');
-                const price = this.getAttribute('data-product-price');
-                const quantity = this.getAttribute('data-product-quantity');
-                const description = this.getAttribute('data-product-description');
-                const imagePath = this.getAttribute('data-product-image');
-                openFullEditModal(productId, productName, category, price, quantity, description, imagePath);
+        // Also handle clicking outside modals to close them
+        if (!actionFound) {
+            const modals = [
+                {modal: document.getElementById('deleteModal'), content: '.modal-content'},
+                {modal: document.getElementById('restockModal'), content: '.modal-content'},
+                {modal: document.getElementById('quickEditModal'), content: '.modal-content'},
+                {modal: document.getElementById('addProductModal'), content: '.modal-content'},
+                {modal: document.getElementById('fullEditModal'), content: '.modal-content'}
+            ];
+            
+            modals.forEach(({modal, content}) => {
+                if (modal && !modal.classList.contains('hidden')) {
+                    const modalContent = modal.querySelector(content);
+                    if (modalContent && !modalContent.contains(e.target)) {
+                        modal.classList.add('hidden');
+                    }
+                }
             });
-        });
-        
-        // Delete buttons
-        document.querySelectorAll('[data-action="delete"]').forEach(button => {
-            button.addEventListener('click', function() {
-                const productId = this.getAttribute('data-product-id');
-                const productName = this.getAttribute('data-product-name');
-                confirmDelete(productId, productName);
-            });
-        });
+        }
     });
 </script>

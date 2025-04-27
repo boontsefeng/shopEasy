@@ -17,17 +17,17 @@
         font-weight: 500;
     }
     
-    .status-pending {
+    .status-pending, .status-packaging {
         background-color: #FEF3C7;
         color: #D97706;
     }
     
-    .status-processing {
+    .status-processing, .status-shipping {
         background-color: #DBEAFE;
         color: #2563EB;
     }
     
-    .status-shipped {
+    .status-shipped, .status-delivery {
         background-color: #E0E7FF;
         color: #4F46E5;
     }
@@ -312,7 +312,7 @@
         // Show confirmation dialog
         if (confirm(confirmMessage)) {
             // Show loading state
-            const row = document.querySelector('tr[data-order-id="' + orderId + '"]');
+            const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
             console.log("Found row for update:", row);
                 
             if (row) {
@@ -407,7 +407,14 @@
                             statusBadge.classList.add(`status-${status}`);
                             
                             // Update the text with proper capitalization
-                            statusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                            let displayStatus = status;
+                            if (status === 'packaging') displayStatus = 'Packaging';
+                            else if (status === 'shipping') displayStatus = 'Shipping';
+                            else if (status === 'delivery') displayStatus = 'Delivery';
+                            else if (status === 'delivered') displayStatus = 'Delivered';
+                            else displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+                            
+                            statusBadge.textContent = displayStatus;
                             
                             console.log("Updated status badge to:", statusBadge.textContent);
                         }
@@ -463,6 +470,17 @@
     document.addEventListener('DOMContentLoaded', function() {
         setPageTitle('Order Management');
         
+        // Ensure all status dropdowns have proper event listeners
+        document.querySelectorAll('.status-dropdown').forEach(function(dropdown) {
+            dropdown.addEventListener('change', function() {
+                const orderId = this.getAttribute('data-order-id');
+                const status = this.value;
+                if (orderId && status) {
+                    updateOrderStatus(orderId, status);
+                }
+            });
+        });
+        
         // Filter events
         if (document.getElementById('statusFilter')) {
             document.getElementById('statusFilter').addEventListener('change', filterOrders);
@@ -502,9 +520,9 @@
                 <label for="statusFilter" class="text-sm text-gray-600 mr-2">Status:</label>
                 <select id="statusFilter" class="rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring focus:ring-green-200 focus:ring-opacity-50">
                     <option value="all">All</option>
-                    <option value="packaging">Packaging</option>
-                    <option value="shipping">Shipping</option>
-                    <option value="delivery">Delivery</option>
+                    <option value="packaging">Packaging (Pending)</option>
+                    <option value="shipping">Shipping (Processing)</option>
+                    <option value="delivery">Delivery (Shipped)</option>
                     <option value="delivered">Delivered</option>
                 </select>
             </div>
@@ -603,9 +621,9 @@
                                     </button>
                                     <select data-order-id="${order.orderId}" onchange="updateOrderStatus(this.getAttribute('data-order-id'), this.value)" class="status-dropdown">
                                         <option value="">Update Status</option>
-                                        <option value="packaging">Packaging</option>
-                                        <option value="shipping">Shipping</option>
-                                        <option value="delivery">Delivery</option>
+                                        <option value="packaging">Packaging (Pending)</option>
+                                        <option value="shipping">Shipping (Processing)</option>
+                                        <option value="delivery">Delivery (Shipped)</option>
                                         <option value="delivered">Delivered</option>
                                     </select>
                                 </td>

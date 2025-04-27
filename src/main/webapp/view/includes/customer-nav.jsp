@@ -22,12 +22,18 @@
             </div>
             
             <!-- Navigation Links -->
-            <nav class="hidden md:flex items-center space-x-8">
+            <nav class="hidden md:flex items-center space-x-6">
                 <a href="${pageContext.request.contextPath}/customer/dashboard" class="text-gray-600 hover:text-indigo-600 transition">
                     <i class="fas fa-home mr-1"></i> Home
                 </a>
                 <a href="${pageContext.request.contextPath}/customer/products" class="text-gray-600 hover:text-indigo-600 transition">
                     <i class="fas fa-shopping-bag mr-1"></i> Products
+                </a>
+                <a href="${pageContext.request.contextPath}/customer/raya-discounts" class="text-gray-600 hover:text-indigo-600 transition relative group">
+                    <i class="fas fa-tag mr-1"></i> Raya Deals
+                    <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                        50%
+                    </span>
                 </a>
                 <a href="${pageContext.request.contextPath}/customer/orders" class="text-gray-600 hover:text-indigo-600 transition">
                     <i class="fas fa-clipboard-list mr-1"></i> Orders
@@ -105,6 +111,10 @@
                 </a>
                 <a href="${pageContext.request.contextPath}/customer/products" class="text-gray-600 hover:text-indigo-600 transition py-2">
                     <i class="fas fa-shopping-bag mr-2"></i> Products
+                </a>
+                <a href="${pageContext.request.contextPath}/customer/raya-discounts" class="text-gray-600 hover:text-indigo-600 transition py-2 flex items-center">
+                    <i class="fas fa-tag mr-2"></i> Raya Deals
+                    <span class="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-1 animate-pulse">50% OFF</span>
                 </a>
                 <a href="${pageContext.request.contextPath}/customer/orders" class="text-gray-600 hover:text-indigo-600 transition py-2">
                     <i class="fas fa-clipboard-list mr-2"></i> Orders

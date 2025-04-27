@@ -37,16 +37,22 @@ import jakarta.servlet.http.HttpSession;
     "/customer/cart/update",
     "/customer/cart/remove",
     "/customer/checkout",
+    "/customer/payment",
+    "/customer/payment/process",
     "/customer/order/place",
     "/customer/orders",
     "/customer/order/details",
-    "/customer/profile"
+    "/customer/profile",
+    "/customer/raya-discounts"
 })
 public class CustomerController extends HttpServlet {
     private ProductDAO productDAO;
     private CartDAO cartDAO;
     private OrderDAO orderDAO;
     private UserDAO userDAO;
+
+    // Add this set as a class variable to track discounted product IDs
+    private final Set<Integer> discountedProductIds = Set.of(3, 4, 6, 8); // T-shirt, Mug, Lamp, Yoga Mat
 
     @Override
     public void init() throws ServletException {
@@ -105,6 +111,10 @@ public class CustomerController extends HttpServlet {
                 handleCheckoutPage(request, response);
                 break;
                 
+            case "/customer/payment":
+                handlePaymentPage(request, response);
+                break;
+                
             case "/customer/orders":
                 handleOrdersPage(request, response);
                 break;
@@ -115,6 +125,10 @@ public class CustomerController extends HttpServlet {
                 
             case "/customer/profile":
                 handleProfilePage(request, response);
+                break;
+                
+            case "/customer/raya-discounts":
+                doGetRayaDiscounts(request, response);
                 break;
                 
             default:
@@ -159,6 +173,10 @@ public class CustomerController extends HttpServlet {
                 handlePlaceOrder(request, response);
                 break;
                 
+            case "/customer/payment/process":
+                handlePaymentProcess(request, response);
+                break;
+                
             case "/customer/profile":
                 handleProfileUpdate(request, response);
                 break;
@@ -189,6 +207,9 @@ public class CustomerController extends HttpServlet {
                 }
             }
         }
+        
+        // Apply discounts to featured products
+        applyDiscounts(featuredProducts);
         
         // Get all product categories
         Set<String> categories = new HashSet<>();
@@ -226,6 +247,9 @@ public class CustomerController extends HttpServlet {
             }
         }
         
+        // Apply discounts to products
+        applyDiscounts(availableProducts);
+        
         // Get all product categories
         Set<String> categories = new HashSet<>();
         for (Product product : products) {
@@ -250,6 +274,13 @@ public class CustomerController extends HttpServlet {
                 Product product = productDAO.getProductById(productId);
                 
                 if (product != null) {
+                    // Apply discount if applicable
+                    if (discountedProductIds.contains(productId)) {
+                        product.setOriginalPrice(product.getPrice());
+                        product.setPrice(product.getPrice() / 2);
+                        product.setDiscounted(true);
+                    }
+                    
                     // Check if product is in user's cart
                     HttpSession session = request.getSession(false);
                     User user = (User) session.getAttribute("user");
@@ -262,6 +293,12 @@ public class CustomerController extends HttpServlet {
                     // Remove current product and out-of-stock products
                     for (Product relatedProduct : relatedProducts) {
                         if (relatedProduct.getProductId() != productId && relatedProduct.getQuantity() > 0) {
+                            // Apply discounts to related products
+                            if (discountedProductIds.contains(relatedProduct.getProductId())) {
+                                relatedProduct.setOriginalPrice(relatedProduct.getPrice());
+                                relatedProduct.setPrice(relatedProduct.getPrice() / 2);
+                                relatedProduct.setDiscounted(true);
+                            }
                             filteredRelatedProducts.add(relatedProduct);
                         }
                     }
@@ -298,6 +335,9 @@ public class CustomerController extends HttpServlet {
                     availableProducts.add(product);
                 }
             }
+            
+            // Apply discounts to products
+            applyDiscounts(availableProducts);
             
             // Get all product categories
             List<Product> allProducts = productDAO.getAllProducts();
@@ -440,6 +480,13 @@ public class CustomerController extends HttpServlet {
                     HttpSession session = request.getSession(false);
                     User user = (User) session.getAttribute("user");
                     
+                    // Since we're showing discounted prices in the UI but need to store original in cart
+                    // If this is a discounted product, we need to restore the original price before adding to cart
+                    if (discountedProductIds.contains(productId)) {
+                        // The price from DB is the original price, nothing to adjust here
+                        // The UI discount is applied at display time only
+                    }
+                    
                     Cart cart = new Cart(user.getUserId(), productId, quantity);
                     boolean success = cartDAO.addToCart(cart);
                     
@@ -448,9 +495,11 @@ public class CustomerController extends HttpServlet {
                         String redirect = request.getParameter("redirect");
                         if ("cart".equals(redirect)) {
                             response.sendRedirect(request.getContextPath() + "/customer/cart?success=added");
+                        } else if ("raya-discounts".equals(redirect)) {
+                            response.sendRedirect(request.getContextPath() + "/customer/raya-discounts?success=added");
                         } else {
                             response.sendRedirect(request.getContextPath() + 
-                                                "/customer/product/details?id=" + productId + "&success=added");
+                                                 "/customer/product/details?id=" + productId + "&success=added");
                         }
                         return;
                     } else {
@@ -631,7 +680,8 @@ public class CustomerController extends HttpServlet {
         String password = request.getParameter("password");
         
         // Update user information
-        if (password != null && !password.trim().isEmpty()) {
+        boolean updatePassword = password != null && !password.trim().isEmpty();
+        if (updatePassword) {
             user.setPassword(password);
         }
         
@@ -639,8 +689,10 @@ public class CustomerController extends HttpServlet {
         user.setEmail(email);
         user.setContactNumber(contactNumber);
         
-        // Save updated user
-        boolean success = userDAO.updateUser(user);
+        // Save updated user with appropriate method based on password update
+        boolean success = updatePassword ? 
+                userDAO.updateUser(user, true) : 
+                userDAO.updateUser(user);
         
         if (success) {
             // Update session attributes
@@ -652,6 +704,225 @@ public class CustomerController extends HttpServlet {
             request.setAttribute("error", "Failed to update profile");
             request.setAttribute("userProfile", user);
             request.getRequestDispatcher("/view/customer/profile.jsp").forward(request, response);
+        }
+    }
+
+    /**
+     * Display the Raya Special Discounts page
+     */
+    private void doGetRayaDiscounts(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // Check if user is logged in
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("user") == null) {
+            response.sendRedirect(request.getContextPath() + "/login");
+            return;
+        }
+        
+        // Get the discounted products
+        List<Product> discountedProducts = new ArrayList<>();
+        for (Integer productId : discountedProductIds) {
+            Product product = productDAO.getProductById(productId);
+            if (product != null && product.getQuantity() > 0) {
+                // Apply the discount for display
+                product.setOriginalPrice(product.getPrice());
+                product.setPrice(product.getPrice() / 2);
+                product.setDiscounted(true);
+                discountedProducts.add(product);
+            }
+        }
+        
+        // Set cart count for the navigation
+        User user = (User) session.getAttribute("user");
+        int cartCount = cartDAO.getCartItemCount(user.getUserId());
+        request.setAttribute("cartCount", cartCount);
+        
+        // Pass the products to the JSP
+        request.setAttribute("discountedProducts", discountedProducts);
+        
+        // Forward to the Raya discounts page
+        request.getRequestDispatcher("/view/customer/raya-discounts.jsp").forward(request, response);
+    }
+
+    /**
+     * Handle payment page
+     */
+    private void handlePaymentPage(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        HttpSession session = request.getSession(false);
+        User user = (User) session.getAttribute("user");
+        
+        // Debug log
+        System.out.println("Payment page accessed by user: " + user.getName());
+        
+        // Get cart items and total
+        List<Cart> cartItems = cartDAO.getUserCart(user.getUserId());
+        
+        // Check if cart is empty
+        if (cartItems.isEmpty()) {
+            System.out.println("Cart is empty, redirecting to cart page");
+            response.sendRedirect(request.getContextPath() + "/customer/cart?error=empty");
+            return;
+        }
+        
+        int cartTotal = cartDAO.getCartTotal(user.getUserId());
+        
+        request.setAttribute("cartItems", cartItems);
+        request.setAttribute("cartTotal", cartTotal);
+        request.setAttribute("user", user);
+        
+        // Get shipping address from request parameter first
+        String shippingAddress = request.getParameter("shippingAddress");
+        
+        // If not in request, check session attribute
+        if (shippingAddress == null || shippingAddress.isEmpty()) {
+            shippingAddress = (String) session.getAttribute("shippingAddress");
+            System.out.println("Got shipping address from session: " + shippingAddress);
+        }
+        
+        if (shippingAddress != null && !shippingAddress.isEmpty()) {
+            // Store in session for later use
+            session.setAttribute("shippingAddress", shippingAddress);
+            request.setAttribute("shippingAddress", shippingAddress);
+            System.out.println("Setting shipping address in request: " + shippingAddress);
+        } else {
+            System.out.println("No shipping address found in session or request");
+        }
+        
+        System.out.println("Forwarding to payment.jsp");
+        request.getRequestDispatcher("/view/customer/payment.jsp").forward(request, response);
+    }
+
+    /**
+     * Handle payment processing
+     */
+    private void handlePaymentProcess(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        HttpSession session = request.getSession(false);
+        User user = (User) session.getAttribute("user");
+        
+        System.out.println("Payment processing started for user: " + user.getName());
+        
+        // Get cart items
+        List<Cart> cartItems = cartDAO.getUserCart(user.getUserId());
+        
+        // Check if cart is empty
+        if (cartItems.isEmpty()) {
+            System.out.println("Cart is empty, redirecting to cart page");
+            response.sendRedirect(request.getContextPath() + "/customer/cart?error=empty");
+            return;
+        }
+        
+        // Get shipping address from request or session
+        String shippingAddress = request.getParameter("shippingAddress");
+        System.out.println("Shipping address from request: " + shippingAddress);
+        
+        if (shippingAddress == null || shippingAddress.trim().isEmpty()) {
+            shippingAddress = (String) session.getAttribute("shippingAddress");
+            System.out.println("Shipping address from session: " + shippingAddress);
+            
+            if (shippingAddress == null || shippingAddress.trim().isEmpty()) {
+                System.out.println("No shipping address found, redirecting to checkout");
+                response.sendRedirect(request.getContextPath() + "/customer/checkout?error=missing_fields");
+                return;
+            }
+        } else {
+            // Store in session for future use
+            session.setAttribute("shippingAddress", shippingAddress);
+        }
+        
+        // Log card information (in a real app, this would be sent to a payment processor)
+        String cardNumber = request.getParameter("cardNumber");
+        String cardHolderName = request.getParameter("nameOnCard");
+        
+        if (cardNumber != null) {
+            // Mask the card number for logging
+            String maskedCardNumber = cardNumber.replaceAll("\\d(?=\\d{4})", "*");
+            System.out.println("Processing payment with card: " + maskedCardNumber);
+            System.out.println("Card holder: " + cardHolderName);
+        }
+        
+        System.out.println("Card payment successful! Creating order.");
+        
+        // For simplicity, we'll assume the payment was successful
+        // In a real application, you would integrate with a payment gateway here
+        
+        // Create order
+        Order order = new Order(
+            user.getUserId(),
+            new Date(),
+            cartDAO.getCartTotal(user.getUserId()),
+            shippingAddress,
+            "Paid", // Status is "Paid" for card payments
+            "Credit/Debit Card" // Payment method
+        );
+        
+        int orderId = orderDAO.createOrder(order);
+        System.out.println("Created order with ID: " + orderId);
+        
+        if (orderId > 0) {
+            // Create order items
+            boolean allItemsAdded = true;
+            
+            for (Cart item : cartItems) {
+                // Get product to verify stock and get current price
+                Product product = productDAO.getProductById(item.getProductId());
+                
+                if (product != null && product.getQuantity() >= item.getQuantity()) {
+                    // Create order item
+                    OrderItem orderItem = new OrderItem(
+                        orderId,
+                        item.getProductId(),
+                        item.getQuantity(),
+                        product.getPrice()
+                    );
+                    
+                    boolean itemAdded = orderDAO.addOrderItem(orderItem);
+                    
+                    if (itemAdded) {
+                        // Update product stock
+                        int newQuantity = product.getQuantity() - item.getQuantity();
+                        productDAO.updateProductStock(item.getProductId(), newQuantity);
+                        System.out.println("Added item: " + product.getName() + " x" + item.getQuantity());
+                    } else {
+                        allItemsAdded = false;
+                        System.out.println("Failed to add item: " + product.getName());
+                    }
+                } else {
+                    allItemsAdded = false;
+                    System.out.println("Insufficient stock for: " + (product != null ? product.getName() : "Unknown product"));
+                }
+            }
+            
+            if (allItemsAdded) {
+                // Clear cart
+                cartDAO.clearCart(user.getUserId());
+                System.out.println("Cart cleared, redirecting to order details");
+                
+                // Redirect to order details
+                response.sendRedirect(request.getContextPath() + "/customer/order/details?id=" + orderId + "&success=paid");
+            } else {
+                System.out.println("Some items failed to be added to the order");
+                response.sendRedirect(request.getContextPath() + "/customer/checkout?error=items_failed");
+            }
+        } else {
+            System.out.println("Failed to create order");
+            response.sendRedirect(request.getContextPath() + "/customer/checkout?error=order_failed");
+        }
+    }
+
+    // Add this helper method
+    /**
+     * Apply discounts to products in the list
+     * @param products List of products to check for discounts
+     */
+    private void applyDiscounts(List<Product> products) {
+        for (Product product : products) {
+            if (discountedProductIds.contains(product.getProductId())) {
+                // Apply 50% discount to the price displayed (but keep original price in database)
+                product.setOriginalPrice(product.getPrice());
+                product.setPrice(product.getPrice() / 2);
+                product.setDiscounted(true);
+            }
         }
     }
 }

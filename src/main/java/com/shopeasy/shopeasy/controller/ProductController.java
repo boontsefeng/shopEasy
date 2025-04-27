@@ -1,13 +1,5 @@
 package com.shopeasy.shopeasy.controller;
 
-import com.shopeasy.shopeasy.dao.ProductDAO;
-import com.shopeasy.shopeasy.model.Product;
-import com.shopeasy.shopeasy.model.User;
-
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.MultipartConfig;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,6 +9,19 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
+
+import com.shopeasy.shopeasy.dao.ProductDAO;
+import com.shopeasy.shopeasy.model.Product;
+import com.shopeasy.shopeasy.model.User;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
 
 /**
  * Controller for product management
@@ -28,7 +33,7 @@ public class ProductController extends HttpServlet {
     private ProductDAO productDAO;
     
     // Updated path to store in assets directory
-    private static final String UPLOAD_DIR = "view/assets/product-images";
+    private static final String UPLOAD_DIR = "assets";
     private static final String PRODUCTS_JSP = "/view/staff/products.jsp";
     
     @Override
@@ -114,7 +119,7 @@ public class ProductController extends HttpServlet {
                 
             case "/product/delete":
                 // Delete product
-                deleteProduct(request, response);
+                deleteProductGet(request, response);
                 break;
                 
             case "/product/search":
@@ -170,6 +175,10 @@ public class ProductController extends HttpServlet {
             return;
         }
         
+        // Log the request content type and path for debugging
+        System.out.println("Request Content Type: " + request.getContentType());
+        System.out.println("Processing POST request for path: " + path);
+        
         switch (path) {
             case "/product/add":
                 // Add new product
@@ -184,6 +193,11 @@ public class ProductController extends HttpServlet {
             case "/product/restock":
                 // Handle restock form submission
                 restockProduct(request, response);
+                break;
+                
+            case "/product/delete":
+                // Handle delete form submission directly in post (as alternative to GET method)
+                deleteProductPost(request, response);
                 break;
                 
             default:
@@ -356,41 +370,90 @@ public class ProductController extends HttpServlet {
      */
     private void restockProduct(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         int productId;
-        int addStock;
+        int newStock = 0;
         
         try {
             productId = Integer.parseInt(request.getParameter("productId"));
-            addStock = Integer.parseInt(request.getParameter("addStock"));
+            
+            // Check if we have addStock or newStock parameter
+            String addStockStr = request.getParameter("addStock");
+            String newStockStr = request.getParameter("newStock");
+            
+            if (addStockStr != null && !addStockStr.isEmpty()) {
+                // We have addStock - need to get current stock and add to it
+                int addStock = Integer.parseInt(addStockStr);
+                
+                // Get existing product
+                Product product = productDAO.getProductById(productId);
+                if (product == null) {
+                    response.sendRedirect(request.getContextPath() + "/products?error=notfound");
+                    return;
+                }
+                
+                // Calculate new stock level
+                newStock = product.getQuantity() + addStock;
+            } else if (newStockStr != null && !newStockStr.isEmpty()) {
+                // We have newStock - use it directly
+                newStock = Integer.parseInt(newStockStr);
+            } else {
+                // Neither parameter was provided
+                response.sendRedirect(request.getContextPath() + "/products?error=invalid");
+                return;
+            }
+            
+            // Get existing product
+            Product product = productDAO.getProductById(productId);
+            if (product == null) {
+                response.sendRedirect(request.getContextPath() + "/products?error=notfound");
+                return;
+            }
+            
+            // Log current and new stock 
+            System.out.println("Restocking Product ID: " + productId + " - Current stock: " + product.getQuantity() + " - New stock: " + newStock);
+            
+            // Update product stock
+            product.setQuantity(newStock);
+            
+            // Update product in database
+            boolean success = productDAO.updateProduct(product);
+            
+            if (success) {
+                response.sendRedirect(request.getContextPath() + "/products?success=restocked");
+            } else {
+                response.sendRedirect(request.getContextPath() + "/products?error=restockfailed");
+            }
         } catch (NumberFormatException e) {
+            System.err.println("Error parsing restock parameters: " + e.getMessage());
             response.sendRedirect(request.getContextPath() + "/products?error=invalid");
-            return;
-        }
-        
-        // Get existing product
-        Product product = productDAO.getProductById(productId);
-        if (product == null) {
-            response.sendRedirect(request.getContextPath() + "/products?error=notfound");
-            return;
-        }
-        
-        // Calculate new stock level
-        int newStock = product.getQuantity() + addStock;
-        product.setQuantity(newStock);
-        
-        // Update product
-        boolean success = productDAO.updateProduct(product);
-        
-        if (success) {
-            response.sendRedirect(request.getContextPath() + "/products?success=restocked");
-        } else {
-            response.sendRedirect(request.getContextPath() + "/products?error=restockfailed");
         }
     }
     
     /**
-     * Delete a product
+     * Delete a product through POST request
      */
-    private void deleteProduct(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private void deleteProductPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String productIdStr = request.getParameter("productId");
+        if (productIdStr != null && !productIdStr.isEmpty()) {
+            try {
+                int productId = Integer.parseInt(productIdStr);
+                boolean success = productDAO.deleteProduct(productId);
+                if (success) {
+                    response.sendRedirect(request.getContextPath() + "/products?success=deleted");
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                // Invalid product ID
+                System.err.println("Invalid product ID format: " + e.getMessage());
+            }
+        }
+        // Redirect with error if deletion failed or ID was invalid
+        response.sendRedirect(request.getContextPath() + "/products?error=deletefailed");
+    }
+    
+    /**
+     * Delete a product through GET request (used by the delete link in the UI)
+     */
+    private void deleteProductGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String productIdStr = request.getParameter("id");
         if (productIdStr != null && !productIdStr.isEmpty()) {
             try {
@@ -427,16 +490,13 @@ public class ProductController extends HttpServlet {
                 if (!dirCreated) {
                     System.err.println("Failed to create directory: " + uploadPath);
                     // Try to create parent directories
-                    File assetsDir = new File(applicationPath + File.separator + "view" + File.separator + "assets");
-                    if (!assetsDir.exists()) {
-                        assetsDir.mkdirs();
-                    }
-                    uploadDir.mkdirs();
+                    uploadDir.getParentFile().mkdirs();
+                    uploadDir.mkdir();
                 }
             }
             
-            // Generate a unique filename
-            String fileName = UUID.randomUUID().toString() + getFileExtension(filePart);
+            // Generate a unique filename to avoid overwriting
+            String fileName = UUID.randomUUID().toString() + "_" + getOriginalFileName(filePart);
             
             // Save the file
             InputStream inputStream = filePart.getInputStream();
@@ -446,13 +506,30 @@ public class ProductController extends HttpServlet {
             // Log debug information
             System.out.println("Image saved to: " + filePath.toString());
             
-            // Return the relative path for database storage
-            return "assets/product-images/" + fileName;
+            // Return the relative path for storing in the database
+            // This is the path that will be used in HTML to display the image
+            return UPLOAD_DIR + "/" + fileName;
+            
         } catch (IOException e) {
-            System.err.println("Error uploading image: " + e.getMessage());
+            System.err.println("Error saving uploaded file: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
+    }
+    
+    /**
+     * Get the original filename from Part
+     */
+    private String getOriginalFileName(Part part) {
+        String contentDisp = part.getHeader("content-disposition");
+        String[] items = contentDisp.split(";");
+        
+        for (String item : items) {
+            if (item.trim().startsWith("filename")) {
+                return item.substring(item.indexOf("=") + 2, item.length() - 1);
+            }
+        }
+        return UUID.randomUUID().toString() + getFileExtension(part);
     }
     
     /**

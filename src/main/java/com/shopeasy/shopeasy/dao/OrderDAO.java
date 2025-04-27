@@ -77,7 +77,7 @@ public class OrderDAO {
                 case "cash on delivery":
                     dbPaymentMethod = "cash";
                     break;
-                case "card on delivery":
+                case "credit/debit card":
                     dbPaymentMethod = "credit";
                     break;
                 case "upi payment":
@@ -116,36 +116,63 @@ public class OrderDAO {
     public boolean updateOrderStatus(int orderId, String status) {
         // Map the application status to database status
         String dbStatus;
-        switch(status) {
-            case "pending":
-                dbStatus = "packaging";
-                break;
-            case "processing":
-                dbStatus = "shipping";
-                break;
-            case "shipped":
-                dbStatus = "delivery";
-                break;
-            case "delivered":
-                dbStatus = "delivered";
-                break;
-            case "cancelled":
-                dbStatus = "cancelled";
-                break;
-            default:
-                dbStatus = "packaging"; // Default to packaging if unknown status
+        System.out.println("Input status value: '" + status + "'");
+        
+        // Direct mapping without transformation - use exactly what comes from the dropdown
+        // The dropdown options are already using the database enum values
+        if (status.equals("packaging") || status.equals("shipping") || 
+            status.equals("delivery") || status.equals("delivered")) {
+            dbStatus = status;
+        } else {
+            // For backward compatibility, keep the old mapping as fallback
+            switch(status.toLowerCase()) {
+                case "pending":
+                    dbStatus = "packaging";
+                    break;
+                case "processing":
+                    dbStatus = "shipping";
+                    break;
+                case "shipped":
+                    dbStatus = "delivery";
+                    break;
+                default:
+                    System.out.println("Warning: Unknown status '" + status + "' being mapped to 'packaging'");
+                    dbStatus = "packaging"; // Default to packaging if unknown status
+            }
+        }
+        
+        System.out.println("Mapped status '" + status + "' to DB status '" + dbStatus + "' for update");
+        
+        // First, verify the order exists
+        Order existingOrder = getOrderById(orderId);
+        if (existingOrder == null) {
+            System.err.println("Cannot update order status: Order #" + orderId + " does not exist");
+            return false;
         }
         
         String sql = "UPDATE orders SET order_status = ? WHERE order_id = ?";
+        System.out.println("Executing SQL: " + sql + " with parameters: [" + dbStatus + ", " + orderId + "]");
         
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, dbStatus);
             stmt.setInt(2, orderId);
             
             int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
+            boolean success = rowsAffected > 0;
+            
+            if (success) {
+                System.out.println("Successfully updated order #" + orderId + " status to '" + dbStatus + "'");
+            } else {
+                System.err.println("Update statement executed but no rows affected for order #" + orderId);
+            }
+            
+            return success;
         } catch (SQLException e) {
-            System.err.println("Error updating order status: " + e.getMessage());
+            System.err.println("Database error updating order #" + orderId + " status: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } catch (Exception e) {
+            System.err.println("Unexpected error updating order #" + orderId + " status: " + e.getMessage());
             e.printStackTrace();
             return false;
         }

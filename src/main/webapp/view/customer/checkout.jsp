@@ -103,17 +103,17 @@
                                         </label>
                                     </div>
                                     <div class="flex items-center">
-                                        <input type="radio" id="paymentCard" name="paymentMethod" value="Card on Delivery"
+                                        <input type="radio" id="paymentCard" name="paymentMethod" value="Credit/Debit Card"
                                                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
                                         <label for="paymentCard" class="ml-3 text-gray-700">
-                                            Card on Delivery (Debit/Credit)
+                                            Credit/Debit Card
                                         </label>
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="mt-6">
-                                <button type="submit" 
+                                <button type="submit" id="placeOrderBtn"
                                         class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition">
                                     Place Order
                                 </button>
@@ -182,5 +182,65 @@
     
     <!-- Footer -->
     <jsp:include page="../includes/footer.jsp" />
+    
+    <!-- Add this JavaScript at the end of the file, before </body> -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get form and relevant elements
+            const form = document.querySelector('form');
+            const shippingAddressInput = document.getElementById('shippingAddress');
+            const paymentCardRadio = document.getElementById('paymentCard');
+            const placeOrderBtn = document.getElementById('placeOrderBtn');
+            
+            // Handle the submit event for the form
+            form.addEventListener('submit', function(e) {
+                // If shipping address is filled, store it in session storage
+                if (shippingAddressInput.value) {
+                    sessionStorage.setItem('shippingAddress', shippingAddressInput.value);
+                }
+                
+                // If credit card payment is selected, prevent form submission and redirect
+                if (paymentCardRadio.checked) {
+                    console.log("Card payment selected - redirecting to payment page");
+                    e.preventDefault();
+                    window.location.href = '${pageContext.request.contextPath}/customer/payment';
+                    return false;
+                }
+            });
+            
+            // Make a direct click handler for the Place Order button as well
+            placeOrderBtn.addEventListener('click', function(e) {
+                // If credit card is selected, redirect to payment page
+                if (paymentCardRadio.checked) {
+                    console.log("Button click - Card payment selected");
+                    e.preventDefault();
+                    
+                    // Save shipping address
+                    if (shippingAddressInput.value) {
+                        sessionStorage.setItem('shippingAddress', shippingAddressInput.value);
+                    }
+                    
+                    // Redirect to payment page
+                    window.location.href = '${pageContext.request.contextPath}/customer/payment';
+                    return false;
+                }
+            });
+            
+            // Restore shipping address from session storage if available
+            const savedAddress = sessionStorage.getItem('shippingAddress');
+            if (savedAddress && !shippingAddressInput.value) {
+                shippingAddressInput.value = savedAddress;
+            }
+            
+            // Check if the card payment mode is selected and update button text
+            paymentCardRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    placeOrderBtn.textContent = 'Continue to Payment';
+                } else {
+                    placeOrderBtn.textContent = 'Place Order';
+                }
+            });
+        });
+    </script>
 </body>
 </html> 

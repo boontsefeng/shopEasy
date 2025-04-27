@@ -72,7 +72,7 @@
                                 <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
                                 <input type="text" id="username" value="${userProfile.username}" readonly
                                        class="w-full p-2 border border-gray-300 rounded-md bg-gray-100">
-                                <p class="mt-1 text-xs text-gray-500">Username cannot be changed.</p>
+                                <p class="mt-1 text-xs text-gray-500">Username cannot be changed to ensure account security and maintain system data integrity. It serves as your unique identifier in the system.</p>
                             </div>
                             
                             <div class="mb-4">

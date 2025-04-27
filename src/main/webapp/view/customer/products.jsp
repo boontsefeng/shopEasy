@@ -20,6 +20,59 @@
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
+        
+        .product-image {
+            height: 180px; /* Increased from h-48 (192px) but with better proportion */
+            object-fit: contain; /* Changed from cover to contain to show full product */
+            padding: 10px; /* Add padding to prevent image from touching edges */
+        }
+        
+        .product-title {
+            font-size: 0.95rem; /* Smaller than text-lg */
+            line-height: 1.3;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+        }
+        
+        .product-description {
+            font-size: 0.8rem;
+            line-height: 1.3;
+            margin-bottom: 0.5rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .product-price {
+            font-size: 0.95rem;
+        }
+        
+        .add-to-cart-btn {
+            font-size: 0.75rem;
+            padding: 0.3rem 0.75rem;
+        }
+        
+        .discount-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ef4444;
+            color: white;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .original-price {
+            text-decoration: line-through;
+            color: #9ca3af;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -97,30 +150,38 @@
                         </div>
                     </c:when>
                     <c:otherwise>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             <c:forEach items="${products}" var="product">
                                 <div class="product-card bg-white rounded-lg shadow overflow-hidden h-full flex flex-col">
-                                    <a href="${pageContext.request.contextPath}/customer/product/details?id=${product.productId}" class="block">
+                                    <a href="${pageContext.request.contextPath}/customer/product/details?id=${product.productId}" class="block relative">
+                                        <c:if test="${product.discounted}">
+                                            <span class="discount-badge">-50%</span>
+                                        </c:if>
                                         <img src="${pageContext.request.contextPath}/${product.imagePath}" 
                                              alt="${product.name}" 
-                                             class="w-full h-48 object-cover">
+                                             class="w-full product-image">
                                     </a>
-                                    <div class="p-4 flex-grow">
+                                    <div class="p-3 flex-grow flex flex-col">
                                         <a href="${pageContext.request.contextPath}/customer/product/details?id=${product.productId}" 
                                            class="block">
-                                            <h3 class="text-lg font-medium text-gray-800 mb-2">${product.name}</h3>
+                                            <h3 class="product-title text-gray-800">${product.name}</h3>
                                         </a>
-                                        <p class="text-gray-600 text-sm mb-3 line-clamp-2">${product.description}</p>
+                                        <p class="product-description text-gray-600">${product.description}</p>
                                         <div class="mt-auto">
-                                            <div class="flex justify-between items-center mt-4">
-                                                <span class="text-indigo-600 font-bold">RM${product.price}</span>
+                                            <div class="flex justify-between items-center mt-2">
+                                                <span class="product-price text-indigo-600 font-bold">
+                                                    <c:if test="${product.discounted}">
+                                                        <span class="original-price">RM${product.originalPrice}</span>
+                                                    </c:if>
+                                                    RM${product.price}
+                                                </span>
                                                 <form action="${pageContext.request.contextPath}/customer/cart/add" method="post">
                                                     <input type="hidden" name="productId" value="${product.productId}">
                                                     <input type="hidden" name="quantity" value="1">
                                                     <input type="hidden" name="redirect" value="cart">
                                                     <button type="submit" 
-                                                            class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 transition">
-                                                        <i class="fas fa-cart-plus mr-1"></i> Add to Cart
+                                                            class="add-to-cart-btn bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+                                                        <i class="fas fa-cart-plus mr-1"></i> Add
                                                     </button>
                                                 </form>
                                             </div>

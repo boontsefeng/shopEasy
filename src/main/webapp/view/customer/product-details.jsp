@@ -20,6 +20,55 @@
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
+        
+        .original-price {
+            text-decoration: line-through;
+            color: #9ca3af;
+            font-size: 1.25rem;
+            margin-right: 0.5rem;
+        }
+        
+        .discount-badge {
+            display: inline-block;
+            background-color: #ef4444;
+            color: white;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            margin-left: 0.75rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+        
+        .related-discount-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ef4444;
+            color: white;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .related-original-price {
+            text-decoration: line-through;
+            color: #9ca3af;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -101,9 +150,16 @@
             <div class="md:flex">
                 <!-- Product Image -->
                 <div class="md:w-1/2 p-6">
-                    <img src="${pageContext.request.contextPath}/${product.imagePath}" 
-                         alt="${product.name}" 
-                         class="w-full h-auto object-contain max-h-96">
+                    <div class="relative">
+                        <c:if test="${product.discounted}">
+                            <div class="absolute top-4 right-4 bg-red-600 text-white text-sm font-bold px-3 py-1 rounded-full">
+                                50% OFF
+                            </div>
+                        </c:if>
+                        <img src="${pageContext.request.contextPath}/${product.imagePath}" 
+                            alt="${product.name}" 
+                            class="w-full h-auto object-contain max-h-96">
+                    </div>
                 </div>
                 
                 <!-- Product Info -->
@@ -115,9 +171,20 @@
                     <h1 class="text-3xl font-bold text-gray-900 mb-4">${product.name}</h1>
                     
                     <div class="mb-6">
-                        <span class="text-2xl font-bold text-indigo-600">RM${product.price}</span>
+                        <div class="flex items-center">
+                            <c:choose>
+                                <c:when test="${product.discounted}">
+                                    <span class="original-price">RM${product.originalPrice}</span>
+                                    <span class="text-2xl font-bold text-red-600">RM${product.price}</span>
+                                    <span class="discount-badge">50% OFF</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <span class="text-2xl font-bold text-indigo-600">RM${product.price}</span>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
                         <c:if test="${product.quantity < 10 && product.quantity > 0}">
-                            <span class="ml-4 text-sm text-orange-600 font-medium">
+                            <span class="mt-2 inline-block text-sm text-orange-600 font-medium">
                                 <i class="fas fa-exclamation-circle mr-1"></i> Only ${product.quantity} left in stock
                             </span>
                         </c:if>
@@ -209,7 +276,10 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <c:forEach items="${relatedProducts}" var="relProduct" end="3">
                         <div class="product-card bg-white rounded-lg shadow overflow-hidden">
-                            <a href="${pageContext.request.contextPath}/customer/product/details?id=${relProduct.productId}" class="block">
+                            <a href="${pageContext.request.contextPath}/customer/product/details?id=${relProduct.productId}" class="block relative">
+                                <c:if test="${relProduct.discounted}">
+                                    <span class="related-discount-badge">-50%</span>
+                                </c:if>
                                 <img src="${pageContext.request.contextPath}/${relProduct.imagePath}" 
                                      alt="${relProduct.name}" 
                                      class="w-full h-48 object-cover">
@@ -221,7 +291,12 @@
                                 </a>
                                 <p class="text-gray-600 text-sm mb-3 line-clamp-2">${relProduct.description}</p>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-indigo-600 font-bold">RM${relProduct.price}</span>
+                                    <span class="text-indigo-600 font-bold">
+                                        <c:if test="${relProduct.discounted}">
+                                            <span class="related-original-price">RM${relProduct.originalPrice}</span>
+                                        </c:if>
+                                        RM${relProduct.price}
+                                    </span>
                                     <a href="${pageContext.request.contextPath}/customer/product/details?id=${relProduct.productId}" 
                                        class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 transition">
                                         View Details

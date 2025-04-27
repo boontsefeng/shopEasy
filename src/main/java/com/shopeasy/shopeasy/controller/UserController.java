@@ -1,17 +1,22 @@
 package com.shopeasy.shopeasy.controller;
 
+import java.io.IOException;
+import java.util.List;
+
+import com.shopeasy.shopeasy.dao.OrderDAO;
 import com.shopeasy.shopeasy.dao.ProductDAO;
 import com.shopeasy.shopeasy.dao.RegistrationKeyDAO;
 import com.shopeasy.shopeasy.dao.UserDAO;
-import com.shopeasy.shopeasy.dao.OrderDAO;
 import com.shopeasy.shopeasy.model.Product;
 import com.shopeasy.shopeasy.model.RegistrationKey;
 import com.shopeasy.shopeasy.model.User;
-import jakarta.servlet.*;
-import jakarta.servlet.http.*;
-import jakarta.servlet.annotation.*;
-import java.io.IOException;
-import java.util.List;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @WebServlet(urlPatterns = {"/login", "/logout", "/dashboard", "/profile", "/register"})
 public class UserController extends HttpServlet {
