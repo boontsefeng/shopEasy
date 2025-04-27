@@ -1,6 +1,7 @@
 package com.shopeasy.shopeasy.controller;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -8,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
-import java.util.UUID;
 
 import com.shopeasy.shopeasy.dao.ProductDAO;
 import com.shopeasy.shopeasy.model.Product;
@@ -40,6 +40,33 @@ public class ProductController extends HttpServlet {
     public void init() throws ServletException {
         super.init();
         productDAO = new ProductDAO();
+        
+        // Initialize the images directory in the webapp
+        initializeImageDirectories();
+    }
+    
+    /**
+     * Initialize the images directory in the webapp
+     */
+    private void initializeImageDirectories() {
+        try {
+            // Define path to webapp assets directory
+            String webappRoot = getServletContext().getRealPath("/");
+            String webappAssetsPath = webappRoot + UPLOAD_DIR;
+            
+            // Create assets directory if it doesn't exist
+            File webappAssetsDir = new File(webappAssetsPath);
+            if (!webappAssetsDir.exists()) {
+                webappAssetsDir.mkdirs();
+                System.out.println("Created webapp assets directory: " + webappAssetsPath);
+            } else {
+                System.out.println("Webapp assets directory exists at: " + webappAssetsPath);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error initializing images directory: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     @Override
@@ -473,41 +500,74 @@ public class ProductController extends HttpServlet {
     
     /**
      * Process image upload and return the path
-     * UPDATED to fix image path issues
+     * UPDATED to save both to deployed directory and source project assets
      */
     private String processImageUpload(Part filePart, HttpServletRequest request) {
         try {
-            // Get the real application path on the server
-            String applicationPath = request.getServletContext().getRealPath("");
+            // Get the original filename without modification
+            String fileName = getOriginalFileName(filePart);
             
-            // Create the full path to the upload directory
-            String uploadPath = applicationPath + File.separator + UPLOAD_DIR;
+            // 1. Save to deployed webapp assets (target directory)
+            String webappRoot = getServletContext().getRealPath("/");
+            String webappAssetsPath = webappRoot + UPLOAD_DIR;
             
-            // Ensure directory exists
-            File uploadDir = new File(uploadPath);
-            if (!uploadDir.exists()) {
-                boolean dirCreated = uploadDir.mkdirs();
-                if (!dirCreated) {
-                    System.err.println("Failed to create directory: " + uploadPath);
-                    // Try to create parent directories
-                    uploadDir.getParentFile().mkdirs();
-                    uploadDir.mkdir();
+            // Ensure webapp assets directory exists
+            File webappAssetsDir = new File(webappAssetsPath);
+            if (!webappAssetsDir.exists()) {
+                webappAssetsDir.mkdirs();
+                System.out.println("Created webapp assets directory: " + webappAssetsPath);
+            }
+            
+            // Save the file to the deployed assets directory
+            InputStream inputStream = filePart.getInputStream();
+            Path deployedFilePath = Paths.get(webappAssetsPath, fileName);
+            Files.copy(inputStream, deployedFilePath, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("Image saved to deployed assets directory: " + deployedFilePath.toString());
+            
+            // 2. Save to source project assets directory
+            // Get the current working directory, but we need to locate the project root
+            String workspacePath = System.getProperty("user.dir");
+            
+            // If we're running from target directory, go up to the project root
+            if (workspacePath.contains("target")) {
+                workspacePath = new File(workspacePath).getParent();
+            }
+            
+            // Define path to source assets
+            String srcAssetsPath = workspacePath + File.separator + "src" + File.separator + 
+                                   "main" + File.separator + "webapp" + File.separator + UPLOAD_DIR;
+            
+            // Ensure path exists
+            File srcAssetsDir = new File(srcAssetsPath);
+            if (!srcAssetsDir.exists()) {
+                boolean dirCreated = srcAssetsDir.mkdirs();
+                System.out.println("Created source project assets directory (" + dirCreated + "): " + srcAssetsPath);
+            }
+            
+            // Use absolute path as fallback if we can't determine the relative project path
+            if (!new File(srcAssetsPath).exists()) {
+                // Try hardcoded path based on your workspace structure
+                srcAssetsPath = "C:" + File.separator + "Users" + File.separator + "samur" + 
+                              File.separator + "Desktop" + File.separator + "ShopEasy" + 
+                              File.separator + "src" + File.separator + "main" + 
+                              File.separator + "webapp" + File.separator + UPLOAD_DIR;
+                srcAssetsDir = new File(srcAssetsPath);
+                if (!srcAssetsDir.exists()) {
+                    srcAssetsDir.mkdirs();
                 }
             }
             
-            // Generate a unique filename to avoid overwriting
-            String fileName = UUID.randomUUID().toString() + "_" + getOriginalFileName(filePart);
-            
-            // Save the file
-            InputStream inputStream = filePart.getInputStream();
-            Path filePath = Paths.get(uploadPath + File.separator + fileName);
-            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
-            
-            // Log debug information
-            System.out.println("Image saved to: " + filePath.toString());
+            // Save the file to the source project assets directory
+            try (InputStream srcInputStream = new FileInputStream(deployedFilePath.toFile())) {
+                Path srcFilePath = Paths.get(srcAssetsPath, fileName);
+                Files.copy(srcInputStream, srcFilePath, StandardCopyOption.REPLACE_EXISTING);
+                System.out.println("Image saved to source project assets directory: " + srcFilePath.toString());
+            } catch (Exception e) {
+                // Log but continue if we can't save to source (at least it's in the deployed directory)
+                System.err.println("Warning: Could not save to source project directory: " + e.getMessage());
+            }
             
             // Return the relative path for storing in the database
-            // This is the path that will be used in HTML to display the image
             return UPLOAD_DIR + "/" + fileName;
             
         } catch (IOException e) {
@@ -526,10 +586,15 @@ public class ProductController extends HttpServlet {
         
         for (String item : items) {
             if (item.trim().startsWith("filename")) {
-                return item.substring(item.indexOf("=") + 2, item.length() - 1);
+                String filename = item.substring(item.indexOf("=") + 2, item.length() - 1);
+                // Remove any path information (for IE which sends full path)
+                filename = filename.substring(Math.max(filename.lastIndexOf('/'), 
+                                             filename.lastIndexOf('\\')) + 1);
+                return filename;
             }
         }
-        return UUID.randomUUID().toString() + getFileExtension(part);
+        // In case no filename is found, generate one with extension
+        return "product_" + System.currentTimeMillis() + getFileExtension(part);
     }
     
     /**
