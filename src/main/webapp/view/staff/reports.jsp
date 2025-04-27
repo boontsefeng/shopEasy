@@ -1,7 +1,6 @@
 <%@ page contentType="text/html" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
-<%-- No custom EL functions used --%>
 <!DOCTYPE html>
 <%@ include file="dashboard-template.jsp" %>
 
@@ -184,7 +183,7 @@
     }
     
     function updateReportUI(data) {
-        // Update summary data using JavaScript formatting (no EL functions)
+        // Update summary data
         document.getElementById('totalRevenue').textContent = formatCurrencyJS(data.salesSummary.totalRevenue);
         document.getElementById('totalOrders').textContent = data.salesSummary.totalOrders;
         document.getElementById('totalItems').textContent = data.salesSummary.totalItems;
@@ -256,6 +255,7 @@
         });
     }
     
+    // Updated function to display popular products without images
     function displayPopularProducts(products) {
         const container = document.getElementById('popularProducts');
         container.innerHTML = '';
@@ -265,33 +265,45 @@
             return;
         }
         
-        products.forEach((product, index) => {
-            const productElement = document.createElement('div');
-            productElement.className = 'flex items-center p-3 border-b border-gray-100';
+        // For each product, create a clean display row
+        products.forEach(function(product) {
+            // Create the container for each product
+            const productRow = document.createElement('div');
+            productRow.className = 'border-b border-gray-200 py-3 last:border-0';
             
-            const imagePath = product.imagePath || 'default-product.jpg';
-            const imageUrl = '${pageContext.request.contextPath}/' + imagePath;
+            // Create the name element with proper styling
+            const nameElement = document.createElement('div');
+            nameElement.className = 'font-semibold text-gray-800 text-lg mb-1';
+            nameElement.textContent = product.name;
             
-            const productName = product.name || 'Unknown Product';
-            const totalQuantity = product.totalQuantity || 0;
-            const totalRevenue = formatCurrencyJS(product.totalRevenue || 0);
+            // Get the product stats
+            const quantity = product.totalQuantity || 0;
+            const revenue = formatCurrencyJS(product.totalRevenue || 0);
             
-            productElement.innerHTML = `
-                <img src="${imageUrl}" alt="${productName}" class="w-12 h-12 object-cover rounded mr-3">
-                <div class="flex-1">
-                    <div class="font-medium">${productName}</div>
-                    <div class="text-sm text-gray-500 flex justify-between">
-                        <span>${totalQuantity} units</span>
-                        <span>${totalRevenue}</span>
-                    </div>
-                </div>
-            `;
+            // Create the details div with two spans
+            const detailsDiv = document.createElement('div');
+            detailsDiv.className = 'flex justify-between text-sm text-gray-600';
             
-            container.appendChild(productElement);
+            // Create and append quantity span
+            const quantitySpan = document.createElement('span');
+            quantitySpan.textContent = quantity + ' units';
+            detailsDiv.appendChild(quantitySpan);
+            
+            // Create and append revenue span
+            const revenueSpan = document.createElement('span');
+            revenueSpan.textContent = revenue;
+            detailsDiv.appendChild(revenueSpan);
+            
+            // Add elements to the product row
+            productRow.appendChild(nameElement);
+            productRow.appendChild(detailsDiv);
+            
+            // Add the complete product row to the container
+            container.appendChild(productRow);
         });
     }
     
-    // Pure JavaScript currency formatter - no EL function
+    // Pure JavaScript currency formatter
     function formatCurrencyJS(value) {
         if (value === null || value === undefined) {
             return '$0.00';
