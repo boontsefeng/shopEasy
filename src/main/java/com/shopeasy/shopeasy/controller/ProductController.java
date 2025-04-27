@@ -1,12 +1,9 @@
 package com.shopeasy.shopeasy.controller;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 
@@ -500,77 +497,106 @@ public class ProductController extends HttpServlet {
     
     /**
      * Process image upload and return the path
-     * UPDATED to save both to deployed directory and source project assets
+     * UPDATED to save to assets directory without hardcoded paths
      */
     private String processImageUpload(Part filePart, HttpServletRequest request) {
         try {
             // Get the original filename without modification
             String fileName = getOriginalFileName(filePart);
             
-            // 1. Save to deployed webapp assets (target directory)
-            String webappRoot = getServletContext().getRealPath("/");
-            String webappAssetsPath = webappRoot + UPLOAD_DIR;
+            // Create logs for debugging purposes
+            System.out.println("Processing image upload for file: " + fileName);
             
-            // Ensure webapp assets directory exists
-            File webappAssetsDir = new File(webappAssetsPath);
-            if (!webappAssetsDir.exists()) {
-                webappAssetsDir.mkdirs();
-                System.out.println("Created webapp assets directory: " + webappAssetsPath);
+            // 1. First, save to the deployed directory which is guaranteed to exist and work
+            String deployedPath = getServletContext().getRealPath("/") + UPLOAD_DIR;
+            // Ensure directory exists
+            File deployedDir = new File(deployedPath);
+            if (!deployedDir.exists()) {
+                deployedDir.mkdirs();
+                System.out.println("Created deployed assets directory: " + deployedPath);
             }
             
-            // Save the file to the deployed assets directory
+            // Save to deployed directory
             InputStream inputStream = filePart.getInputStream();
-            Path deployedFilePath = Paths.get(webappAssetsPath, fileName);
-            Files.copy(inputStream, deployedFilePath, StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("Image saved to deployed assets directory: " + deployedFilePath.toString());
+            File deployedFile = new File(deployedDir, fileName);
+            Files.copy(inputStream, deployedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("Image saved to deployed directory: " + deployedFile.getAbsolutePath());
             
-            // 2. Save to source project assets directory
-            // Get the current working directory, but we need to locate the project root
-            String workspacePath = System.getProperty("user.dir");
+            // 2. Try to save to the source directory using multiple strategies
+            boolean savedToSource = false;
             
-            // If we're running from target directory, go up to the project root
-            if (workspacePath.contains("target")) {
-                workspacePath = new File(workspacePath).getParent();
+            try {
+                // Try method 1: Get canonical path of webapp root and navigate back to source
+                String webappRoot = getServletContext().getRealPath("/");
+                String possibleProjectRoot = null;
+                
+                // Look for 'target' in the path to identify project root
+                File currentDir = new File(webappRoot);
+                while (currentDir != null && possibleProjectRoot == null) {
+                    if (currentDir.getName().equals("target")) {
+                        possibleProjectRoot = currentDir.getParent();
+                    }
+                    currentDir = currentDir.getParentFile();
+                }
+                
+                if (possibleProjectRoot != null) {
+                    File srcAssetsDir = new File(possibleProjectRoot, 
+                                               "src" + File.separator + "main" + File.separator + 
+                                               "webapp" + File.separator + UPLOAD_DIR);
+                    
+                    if (!srcAssetsDir.exists()) {
+                        srcAssetsDir.mkdirs();
+                    }
+                    
+                    // If directory exists or was created successfully
+                    if (srcAssetsDir.exists()) {
+                        File destFile = new File(srcAssetsDir, fileName);
+                        Files.copy(deployedFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        System.out.println("Image saved to source directory (method 1): " + destFile.getAbsolutePath());
+                        savedToSource = true;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Method 1 failed to save to source: " + e.getMessage());
             }
             
-            // Define path to source assets
-            String srcAssetsPath = workspacePath + File.separator + "src" + File.separator + 
-                                   "main" + File.separator + "webapp" + File.separator + UPLOAD_DIR;
-            
-            // Ensure path exists
-            File srcAssetsDir = new File(srcAssetsPath);
-            if (!srcAssetsDir.exists()) {
-                boolean dirCreated = srcAssetsDir.mkdirs();
-                System.out.println("Created source project assets directory (" + dirCreated + "): " + srcAssetsPath);
-            }
-            
-            // Use absolute path as fallback if we can't determine the relative project path
-            if (!new File(srcAssetsPath).exists()) {
-                // Try hardcoded path based on your workspace structure
-                srcAssetsPath = "C:" + File.separator + "Users" + File.separator + "samur" + 
-                              File.separator + "Desktop" + File.separator + "ShopEasy" + 
-                              File.separator + "src" + File.separator + "main" + 
-                              File.separator + "webapp" + File.separator + UPLOAD_DIR;
-                srcAssetsDir = new File(srcAssetsPath);
-                if (!srcAssetsDir.exists()) {
-                    srcAssetsDir.mkdirs();
+            // Try method 2 if method 1 failed: Use relative path from current directory
+            if (!savedToSource) {
+                try {
+                    String currentDir = System.getProperty("user.dir");
+                    File projectDir = new File(currentDir);
+                    
+                    // Try to navigate to project root by looking for pom.xml
+                    while (projectDir != null && !new File(projectDir, "pom.xml").exists()) {
+                        projectDir = projectDir.getParentFile();
+                    }
+                    
+                    if (projectDir != null) {
+                        File srcAssetsDir = new File(projectDir, 
+                                                   "src" + File.separator + "main" + File.separator + 
+                                                   "webapp" + File.separator + UPLOAD_DIR);
+                        
+                        if (!srcAssetsDir.exists()) {
+                            srcAssetsDir.mkdirs();
+                        }
+                        
+                        if (srcAssetsDir.exists()) {
+                            File destFile = new File(srcAssetsDir, fileName);
+                            Files.copy(deployedFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                            System.out.println("Image saved to source directory (method 2): " + destFile.getAbsolutePath());
+                            savedToSource = true;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("Method 2 failed to save to source: " + e.getMessage());
                 }
             }
             
-            // Save the file to the source project assets directory
-            try (InputStream srcInputStream = new FileInputStream(deployedFilePath.toFile())) {
-                Path srcFilePath = Paths.get(srcAssetsPath, fileName);
-                Files.copy(srcInputStream, srcFilePath, StandardCopyOption.REPLACE_EXISTING);
-                System.out.println("Image saved to source project assets directory: " + srcFilePath.toString());
-            } catch (Exception e) {
-                // Log but continue if we can't save to source (at least it's in the deployed directory)
-                System.err.println("Warning: Could not save to source project directory: " + e.getMessage());
-            }
-            
-            // Return the relative path for storing in the database
+            // Return the path for database storage - whether or not we saved to source directory
+            // The application will still work with just the deployed copy
             return UPLOAD_DIR + "/" + fileName;
             
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("Error saving uploaded file: " + e.getMessage());
             e.printStackTrace();
             return null;
