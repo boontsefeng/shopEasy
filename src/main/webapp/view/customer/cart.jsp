@@ -1,5 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ include file="/view/customer/font.jsp" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -95,7 +96,9 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-lg font-medium text-gray-900">RM${item.productPrice}</div>
+                                            <div class="text-lg font-medium text-gray-900">
+                                                RM<fmt:formatNumber value="${item.productPrice}" pattern="#,##0.00" />
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <form action="${pageContext.request.contextPath}/customer/cart/update" method="post" class="flex items-center">
@@ -127,7 +130,9 @@
                                             </form>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-lg font-medium text-gray-900">RM${item.totalPrice}</div>
+                                            <div class="text-lg font-medium text-gray-900">
+                                                RM<fmt:formatNumber value="${item.totalPrice}" pattern="#,##0.00" />
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right">
                                             <form action="${pageContext.request.contextPath}/customer/cart/remove" method="post">
@@ -157,7 +162,9 @@
                             <div class="bg-white p-4 rounded-lg shadow-sm">
                                 <div class="flex justify-between mb-3">
                                     <span class="font-medium text-gray-700">Subtotal:</span>
-                                    <span class="font-bold text-gray-900">RM${cartTotal}</span>
+                                    <span class="font-bold text-gray-900">
+                                        RM<fmt:formatNumber value="${cartTotal}" pattern="#,##0.00" />
+                                    </span>
                                 </div>
                                 <div class="flex justify-between mb-3">
                                     <span class="font-medium text-gray-700">Shipping:</span>
@@ -165,11 +172,15 @@
                                 </div>
                                 <div class="flex justify-between mb-3">
                                     <span class="font-medium text-gray-700">Tax (6% GST):</span>
-                                    <span class="font-medium text-gray-900">RM${cartTotal * 0.06}</span>
+                                    <span class="font-medium text-gray-900">
+                                        RM<fmt:formatNumber value="${cartTotal * 0.06}" pattern="#,##0.00" />
+                                    </span>
                                 </div>
                                 <div class="flex justify-between text-lg border-t pt-3 border-gray-200">
                                     <span class="font-bold text-gray-900">Total:</span>
-                                    <span class="font-bold text-indigo-600">RM${cartTotal * 1.06}</span>
+                                    <span class="font-bold text-indigo-600">
+                                        RM<fmt:formatNumber value="${cartTotal * 1.06}" pattern="#,##0.00" />
+                                    </span>
                                 </div>
                                 
                                 <div class="mt-6">
@@ -201,4 +212,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
