@@ -480,14 +480,16 @@ public class CustomerController extends HttpServlet {
                     HttpSession session = request.getSession(false);
                     User user = (User) session.getAttribute("user");
                     
-                    // Since we're showing discounted prices in the UI but need to store original in cart
-                    // If this is a discounted product, we need to restore the original price before adding to cart
+                    // Create a cart item
+                    Cart cart = new Cart(user.getUserId(), productId, quantity);
+                    
+                    // If this is a discounted product, apply the discount
                     if (discountedProductIds.contains(productId)) {
-                       product.setPrice(product.getPrice()* 0.5);
-                       productDAO.updateProductPrice(productId,product.getPrice());
+                        // Set the discounted product price to be used in cartDAO.getUserCart()
+                        int discountedPrice = product.getPrice() / 2;
+                        cart.setProductPrice(discountedPrice);
                     }
                     
-                    Cart cart = new Cart(user.getUserId(), productId, quantity);
                     boolean success = cartDAO.addToCart(cart);
                     
                     if (success) {
@@ -625,16 +627,16 @@ public class CustomerController extends HttpServlet {
             boolean allItemsAdded = true;
             
             for (Cart item : cartItems) {
-                // Get product to verify stock and get current price
+                // Get product to verify stock
                 Product product = productDAO.getProductById(item.getProductId());
                 
                 if (product != null && product.getQuantity() >= item.getQuantity()) {
-                    // Create order item
+                    // Create order item with price from cart item (which might be discounted)
                     OrderItem orderItem = new OrderItem(
                         orderId,
                         item.getProductId(),
                         item.getQuantity(),
-                        product.getPrice()
+                        item.getProductPrice() // Use price from cart, which includes any discounts
                     );
                     
                     boolean itemAdded = orderDAO.addOrderItem(orderItem);
@@ -864,16 +866,16 @@ public class CustomerController extends HttpServlet {
             boolean allItemsAdded = true;
             
             for (Cart item : cartItems) {
-                // Get product to verify stock and get current price
+                // Get product to verify stock
                 Product product = productDAO.getProductById(item.getProductId());
                 
                 if (product != null && product.getQuantity() >= item.getQuantity()) {
-                    // Create order item
+                    // Create order item with price from cart item (which might be discounted)
                     OrderItem orderItem = new OrderItem(
                         orderId,
                         item.getProductId(),
                         item.getQuantity(),
-                        product.getPrice()
+                        item.getProductPrice() // Use price from cart, which includes any discounts
                     );
                     
                     boolean itemAdded = orderDAO.addOrderItem(orderItem);

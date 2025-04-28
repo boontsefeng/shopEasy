@@ -5,7 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.shopeasy.shopeasy.model.Cart;
 import com.shopeasy.shopeasy.model.Product;
@@ -18,6 +20,7 @@ public class CartDAO {
 
     private Connection conn;
     private ProductDAO productDAO;
+    private Map<Integer, Integer> customPrices = new HashMap<>();
 
     public CartDAO() {
         try {
@@ -42,6 +45,11 @@ public class CartDAO {
         try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
             checkStmt.setInt(1, cart.getUserId());
             checkStmt.setInt(2, cart.getProductId());
+
+            if (cart.getProductPrice() > 0) {
+                String key = cart.getUserId() + "_" + cart.getProductId();
+                customPrices.put(cart.getProductId(), cart.getProductPrice());
+            }
 
             try (ResultSet rs = checkStmt.executeQuery()) {
                 if (rs.next()) {
@@ -145,29 +153,37 @@ public class CartDAO {
 
     /**
      * Get user's cart
-     *
      * @param userId User ID
      * @return List of cart items with product details
      */
     public List<Cart> getUserCart(int userId) {
         List<Cart> cartItems = new ArrayList<>();
         String sql = "SELECT * FROM cartitems WHERE user_id = ?";
-
+        
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
-
+            
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Cart cart = extractCartFromResultSet(rs);
-
+                    
                     // Fetch and add product details
                     Product product = productDAO.getProductById(cart.getProductId());
                     if (product != null) {
                         cart.setProductName(product.getName());
-                        cart.setProductPrice(product.getPrice());
+                        
+                        // Check if we have a custom price for this product
+                        if (customPrices.containsKey(cart.getProductId())) {
+                            // Use the custom price (discounted) from our map
+                            cart.setProductPrice(customPrices.get(cart.getProductId()));
+                        } else {
+                            // Use the standard price from the database
+                            cart.setProductPrice(product.getPrice());
+                        }
+                        
                         cart.setProductImage(product.getImagePath());
                     }
-
+                    
                     cartItems.add(cart);
                 }
             }
@@ -175,7 +191,7 @@ public class CartDAO {
             System.err.println("Error getting user cart: " + e.getMessage());
             e.printStackTrace();
         }
-
+        
         return cartItems;
     }
 
