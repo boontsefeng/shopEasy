@@ -499,10 +499,7 @@
     <div class="p-4 bg-green-500 text-white flex justify-between items-center">
         <h2 class="text-xl font-semibold">Order Management</h2>
         <div class="flex items-center space-x-2">
-            <span id="totalOrders" class="text-sm bg-white text-green-500 py-1 px-3 rounded-full">Total: ${orders.size()} orders</span>
-            <button class="bg-white text-green-500 py-1 px-3 rounded-full text-sm hover:bg-green-100 transition">
-                <i class="fas fa-file-export mr-1"></i> Export
-            </button>
+            <span id="totalOrders" class="text-sm bg-white text-green-500 py-1 px-3 rounded-full">Total: ${orders.size()} orders</span>     
         </div>
     </div>
     
