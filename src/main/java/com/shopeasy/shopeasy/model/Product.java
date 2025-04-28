@@ -1,7 +1,14 @@
 package com.shopeasy.shopeasy.model;
 
-import jakarta.persistence.*;
 import java.io.Serializable;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 /**
  * Product model class representing products table in database
@@ -34,6 +41,13 @@ public class Product implements Serializable {
     
     @Column(name = "image_path", nullable = false, length = 255)
     private String imagePath;
+    
+    // Transient fields for display purposes (not stored in database)
+    @Transient
+    private int originalPrice;
+    
+    @Transient
+    private boolean discounted;
     
     // Default constructor
     public Product() {
@@ -115,6 +129,22 @@ public class Product implements Serializable {
     
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
+    }
+    
+    public int getOriginalPrice() {
+        return originalPrice;
+    }
+    
+    public void setOriginalPrice(int originalPrice) {
+        this.originalPrice = originalPrice;
+    }
+    
+    public boolean isDiscounted() {
+        return discounted;
+    }
+    
+    public void setDiscounted(boolean discounted) {
+        this.discounted = discounted;
     }
     
     @Override

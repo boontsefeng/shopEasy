@@ -1,7 +1,14 @@
 package com.shopeasy.shopeasy.model;
 
-import jakarta.persistence.*;
 import java.io.Serializable;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 /**
  * User model class representing users table in database
@@ -34,6 +41,10 @@ public class User implements Serializable {
     
     @Column(name = "email", nullable = false, length = 100)
     private String email;
+    
+    // Transient field for order count (not stored in database)
+    @Transient
+    private int orderCount;
     
     // Default constructor
     public User() {
@@ -115,6 +126,14 @@ public class User implements Serializable {
     
     public void setEmail(String email) {
         this.email = email;
+    }
+    
+    public int getOrderCount() {
+        return orderCount;
+    }
+    
+    public void setOrderCount(int orderCount) {
+        this.orderCount = orderCount;
     }
     
     @Override

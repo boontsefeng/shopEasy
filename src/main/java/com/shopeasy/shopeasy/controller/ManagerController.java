@@ -1,7 +1,13 @@
 package com.shopeasy.shopeasy.controller;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.shopeasy.shopeasy.dao.OrderDAO;
 import com.shopeasy.shopeasy.dao.RegistrationKeyDAO;
 import com.shopeasy.shopeasy.dao.UserDAO;
+import com.shopeasy.shopeasy.model.Order;
 import com.shopeasy.shopeasy.model.RegistrationKey;
 import com.shopeasy.shopeasy.model.User;
 
@@ -11,8 +17,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Controller for manager-specific functionality
@@ -25,6 +29,7 @@ import java.util.List;
         "/manager/customers",
         "/manager/customer/edit",
         "/manager/customer/delete",
+        "/manager/customer/orders",
         "/manager/keys",
         "/manager/keys/generate",
         "/manager/keys/delete",
@@ -86,11 +91,43 @@ public class ManagerController extends HttpServlet {
                 break;
 
             case "/manager/customers":
-                // Get all customers and redirect to staff page with parameter
+                // Get all customers and forward to customer management page
                 List<User> customerList = userDAO.getUsersByRole("customer");
+                
+                // Get order counts for each customer
+                OrderDAO orderDAO = new OrderDAO();
+                for (User customer : customerList) {
+                    int orderCount = orderDAO.getOrderCountByUserId(customer.getUserId());
+                    customer.setOrderCount(orderCount);
+                }
+                
+                // Apply sorting if requested
+                String sortBy = request.getParameter("sortBy");
+                if (sortBy != null) {
+                    if (sortBy.equals("name")) {
+                        customerList.sort((c1, c2) -> c1.getName().compareToIgnoreCase(c2.getName()));
+                    } else if (sortBy.equals("orders")) {
+                        customerList.sort((c1, c2) -> Integer.compare(c2.getOrderCount(), c1.getOrderCount()));
+                    }
+                    // Default is recent, no sorting needed as database typically returns most recent first
+                }
+                
+                // Apply search filter if provided
+                String search = request.getParameter("search");
+                if (search != null && !search.trim().isEmpty()) {
+                    String searchLower = search.toLowerCase();
+                    List<User> filteredList = new ArrayList<>();
+                    for (User customer : customerList) {
+                        if (customer.getName().toLowerCase().contains(searchLower) ||
+                            customer.getEmail().toLowerCase().contains(searchLower)) {
+                            filteredList.add(customer);
+                        }
+                    }
+                    customerList = filteredList;
+                }
+                
                 request.setAttribute("customerList", customerList);
-                // Forward to the dashboard since dedicated customer page may not exist
-                request.getRequestDispatcher("/view/staff/dashboard.jsp").forward(request, response);
+                request.getRequestDispatcher("/view/staff/manager/customer-management.jsp").forward(request, response);
                 break;
 
             case "/manager/customer/edit":
@@ -101,6 +138,11 @@ public class ManagerController extends HttpServlet {
             case "/manager/customer/delete":
                 // Delete customer
                 handleDeleteCustomer(request, response);
+                break;
+
+            case "/manager/customer/orders":
+                // View customer orders
+                handleCustomerOrders(request, response);
                 break;
 
             case "/manager/keys":
@@ -352,15 +394,15 @@ public class ManagerController extends HttpServlet {
                 User customer = userDAO.getUserById(userId);
                 if (customer != null && "customer".equals(customer.getRole())) {
                     request.setAttribute("customer", customer);
-                    // Redirect to dashboard with customer data
-                    request.getRequestDispatcher("/view/staff/dashboard.jsp").forward(request, response);
+                    // Forward to the customer management page with customer data
+                    request.getRequestDispatcher("/view/staff/manager/customer-management.jsp").forward(request, response);
                     return;
                 }
             } catch (NumberFormatException e) {
                 // Invalid user ID
             }
         }
-        // Redirect to dashboard if customer not found or ID is invalid
+        // Redirect to customer management page if customer not found or ID is invalid
         response.sendRedirect(request.getContextPath() + "/manager/customers");
     }
 
@@ -415,16 +457,19 @@ public class ManagerController extends HttpServlet {
         String password = request.getParameter("password");
 
         // Only update password if provided
-        if (password != null && !password.trim().isEmpty()) {
-            customer.setPassword(password); // Note: In production, use proper password hashing
+        boolean updatePassword = password != null && !password.trim().isEmpty();
+        if (updatePassword) {
+            customer.setPassword(password);
         }
 
         customer.setName(name);
         customer.setEmail(email);
         customer.setContactNumber(contactNumber);
 
-        // Save updated customer
-        boolean success = userDAO.updateUser(customer);
+        // Save updated customer with appropriate method based on password update
+        boolean success = updatePassword ? 
+                userDAO.updateUser(customer, true) : 
+                userDAO.updateUser(customer);
 
         if (success) {
             // Customer updated successfully
@@ -433,7 +478,7 @@ public class ManagerController extends HttpServlet {
             // Failed to update customer
             request.setAttribute("error", "Failed to update customer");
             request.setAttribute("customer", customer);
-            request.getRequestDispatcher("/view/staff/dashboard.jsp").forward(request, response);
+            request.getRequestDispatcher("/view/staff/manager/customer-management.jsp").forward(request, response);
         }
     }
 
@@ -528,5 +573,69 @@ public class ManagerController extends HttpServlet {
         }
         // Redirect with error if deletion failed or ID was invalid
         response.sendRedirect(request.getContextPath() + "/manager/keys?error=deletefailed");
+    }
+
+    /**
+     * Handle viewing customer orders
+     */
+    private void handleCustomerOrders(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String userIdStr = request.getParameter("id");
+        if (userIdStr != null && !userIdStr.isEmpty()) {
+            try {
+                int userId = Integer.parseInt(userIdStr);
+                User customer = userDAO.getUserById(userId);
+                if (customer != null && "customer".equals(customer.getRole())) {
+                    // Get customer orders
+                    OrderDAO orderDAO = new OrderDAO();
+                    List<Order> customerOrders = orderDAO.getOrdersByUserId(userId);
+                    
+                    // Set attributes for the JSP
+                    request.setAttribute("customer", customer);
+                    request.setAttribute("customerOrders", customerOrders);
+                    
+                    // Forward to a simple JSP to display the orders in JSON format for AJAX
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    
+                    // Create a simple JSON response manually
+                    StringBuilder json = new StringBuilder();
+                    json.append("{\n");
+                    json.append("  \"customer\": {\n");
+                    json.append("    \"id\": ").append(customer.getUserId()).append(",\n");
+                    json.append("    \"name\": \"").append(customer.getName()).append("\",\n");
+                    json.append("    \"email\": \"").append(customer.getEmail()).append("\"\n");
+                    json.append("  },\n");
+                    json.append("  \"orders\": [\n");
+                    
+                    for (int i = 0; i < customerOrders.size(); i++) {
+                        Order order = customerOrders.get(i);
+                        json.append("    {\n");
+                        json.append("      \"orderId\": ").append(order.getOrderId()).append(",\n");
+                        json.append("      \"date\": \"").append(order.getOrderDate()).append("\",\n");
+                        json.append("      \"amount\": ").append(order.getTotalAmount()).append(",\n");
+                        json.append("      \"status\": \"").append(order.getStatus()).append("\",\n");
+                        json.append("      \"paymentMethod\": \"").append(order.getPaymentMethod()).append("\"\n");
+                        json.append("    }");
+                        if (i < customerOrders.size() - 1) {
+                            json.append(",");
+                        }
+                        json.append("\n");
+                    }
+                    
+                    json.append("  ]\n");
+                    json.append("}");
+                    
+                    response.getWriter().write(json.toString());
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                // Invalid user ID
+            }
+        }
+        
+        // Return an empty JSON object if customer not found or ID is invalid
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{ \"error\": \"Customer not found or invalid ID\" }");
     }
 }

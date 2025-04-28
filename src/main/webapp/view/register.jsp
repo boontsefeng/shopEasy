@@ -12,6 +12,15 @@
     <!-- Add animate.css for animations -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body, html {
+            font-family: 'Poppins', sans-serifa
+        }
+
+        * {
+            font-family: 'Poppins', sans-serif
+        }
         .register-container {
             background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -34,6 +43,28 @@
         
         .animated-form {
             animation: fadeInUp 0.5s ease-out;
+        }
+
+        .password-strength {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .requirement {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .requirement i.valid {
+            color: #10B981;
+        }
+
+        .requirement i.invalid {
+            color: #EF4444;
         }
     </style>
 </head>
@@ -73,6 +104,21 @@
                         <input id="password" name="password" type="password" required 
                                class="appearance-none rounded-none relative block w-full pl-10 px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
                                placeholder="Password">
+                    </div>
+                    <!-- Password requirements display -->
+                    <div class="password-strength px-3 py-2 bg-gray-50 border border-gray-300">
+                        <div class="requirement" id="length-check">
+                            <i class="fas fa-times-circle invalid"></i>
+                            <span>At least 8 characters</span>
+                        </div>
+                        <div class="requirement" id="uppercase-check">
+                            <i class="fas fa-times-circle invalid"></i>
+                            <span>At least one uppercase letter</span>
+                        </div>
+                        <div class="requirement" id="special-check">
+                            <i class="fas fa-times-circle invalid"></i>
+                            <span>At least one special character</span>
+                        </div>
                     </div>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -117,7 +163,7 @@
                 </div>
 
                 <div>
-                    <button type="submit" 
+                    <button type="submit" id="registerButton"
                             class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out transform hover:scale-105">
                         <span class="absolute left-0 inset-y-0 flex items-center pl-3">
                             <i class="fas fa-user-plus text-indigo-300 group-hover:text-indigo-200"></i>
@@ -142,25 +188,57 @@
         document.addEventListener('DOMContentLoaded', function() {
             const formContainer = document.querySelector('.form-container');
             formContainer.classList.add('animate__animated', 'animate__fadeIn');
-        });
-        
-        // Form validation function
-        function validateForm() {
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
             
-            if (password !== confirmPassword) {
-                alert('Passwords do not match. Please try again.');
-                return false;
-            }
-            
-            return true;
-        }
-        
-        // Real-time password match validation
-        document.addEventListener('DOMContentLoaded', function() {
+            // Get elements
             const password = document.getElementById('password');
             const confirmPassword = document.getElementById('confirmPassword');
+            const registerButton = document.getElementById('registerButton');
+            
+            // Password requirement check elements
+            const lengthCheck = document.getElementById('length-check').querySelector('i');
+            const uppercaseCheck = document.getElementById('uppercase-check').querySelector('i');
+            const specialCheck = document.getElementById('special-check').querySelector('i');
+            
+            // Initial state
+            let passwordValid = false;
+            
+            function validatePassword() {
+                const value = password.value;
+                
+                // Check length
+                const lengthValid = value.length >= 8;
+                updateIcon(lengthCheck, lengthValid);
+                
+                // Check uppercase
+                const uppercaseValid = /[A-Z]/.test(value);
+                updateIcon(uppercaseCheck, uppercaseValid);
+                
+                // Check special character
+                const specialValid = /[!@#$%^&*(),.?":{}|<>]/.test(value);
+                updateIcon(specialCheck, specialValid);
+                
+                // Overall validity
+                passwordValid = lengthValid && uppercaseValid && specialValid;
+                
+                // Update UI based on requirements
+                if (passwordValid) {
+                    password.classList.remove('border-red-300');
+                    password.classList.add('border-green-300');
+                } else {
+                    password.classList.remove('border-green-300');
+                    password.classList.add('border-red-300');
+                }
+            }
+            
+            function updateIcon(iconElement, isValid) {
+                if (isValid) {
+                    iconElement.classList.remove('fa-times-circle', 'invalid');
+                    iconElement.classList.add('fa-check-circle', 'valid');
+                } else {
+                    iconElement.classList.remove('fa-check-circle', 'valid');
+                    iconElement.classList.add('fa-times-circle', 'invalid');
+                }
+            }
             
             function checkPasswordMatch() {
                 if (confirmPassword.value === '') {
@@ -170,14 +248,43 @@
                 
                 if (password.value !== confirmPassword.value) {
                     confirmPassword.setCustomValidity('Passwords do not match');
+                    confirmPassword.classList.remove('border-green-300');
+                    confirmPassword.classList.add('border-red-300');
                 } else {
                     confirmPassword.setCustomValidity('');
+                    confirmPassword.classList.remove('border-red-300');
+                    confirmPassword.classList.add('border-green-300');
                 }
             }
             
+            // Event listeners
+            password.addEventListener('input', validatePassword);
             password.addEventListener('change', checkPasswordMatch);
-            confirmPassword.addEventListener('keyup', checkPasswordMatch);
+            confirmPassword.addEventListener('input', checkPasswordMatch);
         });
+        
+        // Form validation function
+        function validateForm() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Check password requirements
+            const lengthValid = password.length >= 8;
+            const uppercaseValid = /[A-Z]/.test(password);
+            const specialValid = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            
+            if (!lengthValid || !uppercaseValid || !specialValid) {
+                alert('Password must be at least 8 characters long, include at least one uppercase letter, and one special character.');
+                return false;
+            }
+            
+            if (password !== confirmPassword) {
+                alert('Passwords do not match. Please try again.');
+                return false;
+            }
+            
+            return true;
+        }
     </script>
 </body>
 </html>

@@ -1,14 +1,18 @@
 package com.shopeasy.shopeasy.dao;
 
-import com.shopeasy.shopeasy.model.User;
-import com.shopeasy.shopeasy.util.DBUtil;
-import com.shopeasy.shopeasy.util.PasswordUtil;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.shopeasy.shopeasy.model.User;
+import com.shopeasy.shopeasy.util.DBUtil;
+import com.shopeasy.shopeasy.util.PasswordUtil;
 
 /**
  * Data Access Object for User entity
@@ -395,4 +399,65 @@ public class UserDAO {
         return null;
     }
 
+    /**
+        * Get the total count of customers
+        * @return Total number of customers
+        */
+       public int getCustomerCount() {
+           String sql = "SELECT COUNT(*) FROM users WHERE role = 'customer'";
+           try (Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+               if (rs.next()) {
+                   return rs.getInt(1);
+               }
+           } catch (SQLException e) {
+               System.err.println("Error getting customer count: " + e.getMessage());
+               e.printStackTrace();
+           }
+           return 0;
+       }
+    
+        /**
+         * Get user by phone number
+         * @param phoneNumber User's phone number
+         * @return User object if found, null otherwise
+         */
+        public User getUserByPhoneNumber(String phoneNumber) {
+            // First try exact match
+            String sql = "SELECT * FROM users WHERE contact_number = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, phoneNumber);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        System.out.println("Found user with exact phone match: " + phoneNumber);
+                        return extractUserFromResultSet(rs);
+                    }
+                }
+
+                // If no exact match, try with LIKE for partial matches
+                // This helps when the phone number format might differ (with/without country code)
+                sql = "SELECT * FROM users WHERE contact_number LIKE ?";
+                try (PreparedStatement likeStmt = conn.prepareStatement(sql)) {
+                    // Remove any leading '+' for the search
+                    String searchTerm = phoneNumber.replace("+", "");
+
+                    // Search for the phone number at the end of the string (this catches numbers with/without country code)
+                    likeStmt.setString(1, "%" + searchTerm);
+
+                    try (ResultSet likeRs = likeStmt.executeQuery()) {
+                        if (likeRs.next()) {
+                            System.out.println("Found user with partial phone match: " + phoneNumber);
+                            return extractUserFromResultSet(likeRs);
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("Error getting user by phone number: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            System.out.println("No user found with phone number: " + phoneNumber);
+            return null;
+        }
 }

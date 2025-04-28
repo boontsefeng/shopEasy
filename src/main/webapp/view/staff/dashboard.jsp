@@ -8,6 +8,7 @@
         setPageTitle('Dashboard');
     });
 </script>
+
 <!-- Dashboard Content -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <!-- Dashboard Card 1 -->
@@ -17,7 +18,7 @@
             <i class="fas fa-box text-2xl"></i>
         </div>
         <div class="p-4 flex flex-col items-center">
-            <div class="text-3xl font-bold text-gray-700 mb-2" id="productCount">--</div>
+            <div class="text-3xl font-bold text-gray-700 mb-2">${productCount}</div>
             <div class="text-sm text-gray-500">Total Products</div>
             <a href="${pageContext.request.contextPath}/products" class="mt-4 text-blue-500 hover:text-blue-700 transition">
                 <i class="fas fa-arrow-right mr-1"></i> View All
@@ -32,9 +33,9 @@
             <i class="fas fa-shopping-cart text-2xl"></i>
         </div>
         <div class="p-4 flex flex-col items-center">
-            <div class="text-3xl font-bold text-gray-700 mb-2" id="orderCount">--</div>
+            <div class="text-3xl font-bold text-gray-700 mb-2">${orderCount}</div>
             <div class="text-sm text-gray-500">Total Orders</div>
-            <a href="#" class="mt-4 text-green-500 hover:text-green-700 transition">
+            <a href="${pageContext.request.contextPath}/orders" class="mt-4 text-green-500 hover:text-green-700 transition">
                 <i class="fas fa-arrow-right mr-1"></i> View All
             </a>
         </div>
@@ -47,7 +48,7 @@
             <i class="fas fa-users text-2xl"></i>
         </div>
         <div class="p-4 flex flex-col items-center">
-            <div class="text-3xl font-bold text-gray-700 mb-2" id="customerCount">--</div>
+            <div class="text-3xl font-bold text-gray-700 mb-2">${customerCount}</div>
             <div class="text-sm text-gray-500">Total Customers</div>
             <c:if test="${userRole == 'manager'}">
                 <a href="${pageContext.request.contextPath}/manager/customers" class="mt-4 text-purple-500 hover:text-purple-700 transition">
@@ -69,9 +70,9 @@
             <i class="fas fa-dollar-sign text-2xl"></i>
         </div>
         <div class="p-4 flex flex-col items-center">
-            <div class="text-3xl font-bold text-gray-700 mb-2" id="totalRevenue">$--</div>
+            <div class="text-3xl font-bold text-gray-700 mb-2">${totalRevenue}</div>
             <div class="text-sm text-gray-500">Total Revenue</div>
-            <a href="#" class="mt-4 text-yellow-500 hover:text-yellow-700 transition">
+            <a href="${pageContext.request.contextPath}/reports" class="mt-4 text-yellow-500 hover:text-yellow-700 transition">
                 <i class="fas fa-arrow-right mr-1"></i> View Reports
             </a>
         </div>
@@ -89,7 +90,7 @@
             <div class="text-sm font-medium text-gray-700">View Products</div>
         </a>
         
-        <a href="#" class="bg-green-100 hover:bg-green-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
+        <a href="${pageContext.request.contextPath}/orders" class="bg-green-100 hover:bg-green-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
             <i class="fas fa-truck text-green-500 text-2xl mb-2"></i>
             <div class="text-sm font-medium text-gray-700">View Orders</div>
         </a>
@@ -100,9 +101,9 @@
                 <div class="text-sm font-medium text-gray-700">Add Staff</div>
             </a>
             
-            <a href="${pageContext.request.contextPath}/manager/keys" class="bg-yellow-100 hover:bg-yellow-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
-                <i class="fas fa-key text-yellow-500 text-2xl mb-2"></i>
-                <div class="text-sm font-medium text-gray-700">Manage Keys</div>
+            <a href="${pageContext.request.contextPath}/reports" class="bg-yellow-100 hover:bg-yellow-200 p-4 rounded-lg text-center transition-all transform hover:scale-105">
+                <i class="fas fa-chart-bar text-yellow-500 text-2xl mb-2"></i>
+                <div class="text-sm font-medium text-gray-700">Sales Reports</div>
             </a>
         </c:if>
         <c:if test="${userRole != 'manager'}">
@@ -110,11 +111,12 @@
     </div>
 </div>
 
+
 <!-- Recent Activities Section -->
 <div class="bg-white rounded-lg shadow-md overflow-hidden animate-section">
     <div class="p-4 bg-indigo-500 text-white flex justify-between items-center">
         <h2 class="text-lg font-semibold">Recent Activities</h2>
-        <span class="text-xs bg-white text-indigo-500 py-1 px-2 rounded-full">Last 7 days</span>
+        <span class="text-xs bg-white text-indigo-500 py-1 px-2 rounded-full">In This Session:</span>
     </div>
     <div class="p-4">
         <div class="space-y-4" id="recentActivities">
@@ -167,16 +169,9 @@
     </div>
 </div>
 
-<!-- JavaScript to fetch dashboard data -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // In a real application, you'd fetch this data from the server
-        // This is just for demonstration
-        setTimeout(() => {
-            document.getElementById('productCount').textContent = '124';
-            document.getElementById('orderCount').textContent = '56';
-            document.getElementById('customerCount').textContent = '243';
-            document.getElementById('totalRevenue').textContent = '$12,456';
-        }, 500);
+        // The values are now loaded from the server via EL expressions
+        // No need to set them with JavaScript
     });
 </script>
