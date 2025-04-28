@@ -1,144 +1,136 @@
-ShopEasy - E-commerce Web Application
-Overview
-ShopEasy is a comprehensive e-commerce web application built with JSP, MySQL, and Apache Tomcat 10. This Maven-based project provides a complete shopping experience with user and admin interfaces, product management, cart functionality, order processing, and more.
-Prerequisites
+# 🛒 ShopEasy - E-commerce Web Application
 
-JDK 11 or higher
-Apache Tomcat 10
-MySQL Server (can be installed standalone or via XAMPP)
-NetBeans IDE (recommended)
-Maven (integrated with NetBeans)
+## 📋 Overview
+**ShopEasy** is a comprehensive e-commerce web application built with JSP, MySQL, and Apache Tomcat 10. This Maven-based project provides a complete shopping experience with user and admin interfaces, product management, cart functionality, order processing, and more.
 
-Installation and Setup Guide
-1. Setting up MySQL
-Option A: Using XAMPP (Recommended)
+![ShopEasy Banner](https://placeholder.pics/svg/1200x300/FFD700-FFB900/000000/SHOPEASY%20-%20SHOP%20WITH%20EASE)
 
-Download and install XAMPP from https://www.apachefriends.org/
-Start the XAMPP Control Panel and start the MySQL service
-Open phpMyAdmin by clicking the "Admin" button next to MySQL
-Create a new database named shopeasy
-Import the provided SQL file (database/shopeasy.sql) to set up the database structure
+## ✅ Prerequisites
+- 🔸 JDK 11 or higher
+- 🔸 Apache Tomcat 10
+- 🔸 MySQL Server (can be installed standalone or via XAMPP)
+- 🔸 NetBeans IDE (recommended)
+- 🔸 Maven (integrated with NetBeans)
 
-Option B: Using MySQL Server
+## 🚀 Installation and Setup Guide
 
-Install MySQL Server from https://dev.mysql.com/downloads/
-Create a new database named shopeasy
-Import the provided SQL file (database/shopeasy.sql)
+### 1️⃣ Setting up MySQL
+#### Option A: Using XAMPP (Recommended) 🌟
+1. Download and install XAMPP from [https://www.apachefriends.org/](https://www.apachefriends.org/)
+2. Start the XAMPP Control Panel and start the MySQL service
+3. Open phpMyAdmin by clicking the "Admin" button next to MySQL
+4. Create a new database named `shopeasy`
+5. Import the provided SQL file (`database/shopeasy.sql`) to set up the database structure
 
-2. Setting up Apache Tomcat 10
+#### Option B: Using MySQL Server
+1. Install MySQL Server from [https://dev.mysql.com/downloads/](https://dev.mysql.com/downloads/)
+2. Create a new database named `shopeasy`
+3. Import the provided SQL file (`database/shopeasy.sql`)
 
-Download Apache Tomcat 10 from https://tomcat.apache.org/download-10.cgi
-Extract the downloaded file to a location on your computer (e.g., C:\tomcat10 or /opt/tomcat10)
+### 2️⃣ Setting up Apache Tomcat 10
+1. Download Apache Tomcat 10 from [https://tomcat.apache.org/download-10.cgi](https://tomcat.apache.org/download-10.cgi)
+2. Extract the downloaded file to a location on your computer (e.g., `C:\tomcat10` or `/opt/tomcat10`)
 
-Configuring Tomcat Admin Panel
+#### Configuring Tomcat Admin Panel 🛠️
+1. Navigate to the `conf` directory in your Tomcat installation
+2. Edit the `tomcat-users.xml` file and add the following lines before the closing `</tomcat-users>` tag:
+   ```xml
+   <role rolename="admin-gui"/>
+   <role rolename="manager-gui"/>
+   <user username="your_username" password="your_password" roles="admin-gui,manager-gui"/>
+   ```
+3. Save and close the file
+4. Start Tomcat by running the `startup.bat` (Windows) or `startup.sh` (Linux/Mac) script from the `bin` directory
+5. Access the Tomcat admin panel at [http://localhost:8080/manager/html](http://localhost:8080/manager/html)
+6. Log in with the credentials you set in `tomcat-users.xml`
 
-Navigate to the conf directory in your Tomcat installation
-Edit the tomcat-users.xml file and add the following lines before the closing </tomcat-users> tag:
-xml<role rolename="admin-gui"/>
-<role rolename="manager-gui"/>
-<user username="admin" password="password" roles="admin-gui,manager-gui"/>
+### 3️⃣ Setting up NetBeans with Tomcat
+1. Open NetBeans IDE
+2. Go to Tools > Servers
+3. Click "Add Server"
+4. Select "Apache Tomcat or TomEE" and click "Next"
+5. Browse to the Tomcat installation directory
+6. Set the username and password to match those in `tomcat-users.xml`
+7. Click "Finish"
 
-Save and close the file
-Start Tomcat by running the startup.bat (Windows) or startup.sh (Linux/Mac) script from the bin directory
-Access the Tomcat admin panel at http://localhost:8080/manager/html
-Log in with the credentials you set in tomcat-users.xml
+### 4️⃣ Importing the ShopEasy Project in NetBeans
+1. Go to File > Open Project
+2. Navigate to the ShopEasy project directory and open it
+3. Right-click on the project and select "Properties"
+4. In the "Run" category, ensure that Apache Tomcat is selected as the server
+5. Click "OK"
 
-3. Setting up NetBeans with Tomcat
+### 5️⃣ Database Configuration
+Verify that the database connection settings in `src/main/java/com/shopeasy/util/DBUtil.java` match your local settings:
 
-Open NetBeans IDE
-Go to Tools > Servers
-Click "Add Server"
-Select "Apache Tomcat or TomEE" and click "Next"
-Browse to the Tomcat installation directory
-Set the username and password to match those in tomcat-users.xml
-Click "Finish"
-
-4. Importing the ShopEasy Project in NetBeans
-
-Go to File > Open Project
-Navigate to the ShopEasy project directory and open it
-Right-click on the project and select "Properties"
-In the "Run" category, ensure that Apache Tomcat is selected as the server
-Click "OK"
-
-5. Database Configuration
-Verify that the database connection settings in src/main/java/com/shopeasy/util/DBUtil.java match your local settings:
-javapublic class DBUtil {
+```java
+public class DBUtil {
     private static final String URL = "jdbc:mysql://localhost:3306/shopeasy";
     private static final String USERNAME = "root";
     private static final String PASSWORD = ""; // Make sure this matches your local MySQL password
     
     // Rest of the class...
 }
-6. Running the Project
+```
 
-Right-click on the project in NetBeans
-Select "Clean and Build"
-Once built successfully, click the "Run" button or right-click and select "Run"
-NetBeans will deploy the application to Tomcat and open it in your default web browser
+### 6️⃣ Running the Project
+1. Right-click on the project in NetBeans
+2. Select "Clean and Build"
+3. Once built successfully, click the "Run" button or right-click and select "Run"
+4. NetBeans will deploy the application to Tomcat and open it in your default web browser
 
-Application Features
-User Features
+## 🌈 Application Features
 
-User Authentication: Login, registration, and password reset with OTP
-Product Browsing: View all products with filtering by categories
-Shopping Cart: Add products, modify quantities, remove items
-Checkout Process: Enter shipping details and select payment method
-Order Tracking: View order history and status
-Profile Management: View and update personal information
-Special Promotions: View discounts and special offers (e.g., Raya Discounts)
+### 👤 User Features
+- **🔐 User Authentication**: Login, registration, and password reset with OTP
+- **🔍 Product Browsing**: View all products with filtering by categories
+- **🛒 Shopping Cart**: Add products, modify quantities, remove items
+- **💳 Checkout Process**: Enter shipping details and select payment method
+- **📦 Order Tracking**: View order history and status
+- **👤 Profile Management**: View and update personal information
+- **🎁 Special Promotions**: View discounts and special offers (e.g., Raya Discounts)
 
-Admin/Staff Features
+### 👨‍💼 Admin/Staff Features
+- **📋 Product Management**: Add, edit, restock, delete products, and update images
+- **📊 Order Management**: View order details and update order status
+- **👥 Customer Management**: View customer information and manage accounts
+- **👨‍💻 Staff Management**: Add new staff accounts, manage roles and permissions
+- **📝 Reporting**: Generate sales reports for specified periods
+- **🔑 Registration Key Generation**: Create keys for staff or manager accounts (Manager only)
 
-Product Management: Add, edit, restock, delete products, and update images
-Order Management: View order details and update order status
-Customer Management: View customer information and manage accounts
-Staff Management: Add new staff accounts, manage roles and permissions
-Reporting: Generate sales reports for specified periods
-Registration Key Generation: Create keys for staff or manager accounts (Manager only)
+### ⚠️ Important Testing Notes
+- The OTP system has a maximum of **5 tries** for testing purposes. Please use this feature sparingly to avoid lockouts during testing and evaluation.
 
-Important Testing Notes
+## 🔧 Troubleshooting
 
-The OTP system has a maximum of 5 tries for testing purposes. Please use this feature sparingly to avoid lockouts during testing and evaluation.
+### Common Issues:
+1. **📡 Database Connection Error**:
+   - Verify that MySQL service is running
+   - Check the password in DBUtil.java matches your MySQL password
+   - Ensure the database name is correct
 
-Troubleshooting
-Common Issues:
+2. **🖥️ Tomcat Connection Issues**:
+   - Verify Tomcat is running (check if http://localhost:8080 is accessible)
+   - Ensure the correct version (Tomcat 10) is being used
+   - Check server logs for specific error messages
 
-Database Connection Error:
+3. **📚 Maven Dependencies**:
+   - Run `mvn clean install` from command line to ensure all dependencies are properly downloaded
+   - Check for any conflicts in the pom.xml file
 
-Verify that MySQL service is running
-Check the password in DBUtil.java matches your MySQL password
-Ensure the database name is correct
+4. **🚀 Deployment Issues**:
+   - Clear Tomcat cache by deleting contents of the `work` directory in Tomcat installation
+   - Restart Tomcat and try deploying again
 
+### 📞 Technical Support
+For additional assistance, please contact us at +60 10-273 4914 or +60 11-2400 8260 
 
-Tomcat Connection Issues:
+## 💻 Development Notes
+- This is a **Maven-based project**. All dependencies are managed in the pom.xml file
+- The application uses **JSP** for the view layer, **servlets** for controllers, and **Java beans** for models
+- Database interactions are handled through **JDBC** with connection pooling for efficiency
+- Front-end uses **Bootstrap** for responsive design and **jQuery** for enhanced user experience
 
-Verify Tomcat is running (check if http://localhost:8080 is accessible)
-Ensure the correct version (Tomcat 10) is being used
-Check server logs for specific error messages
+---
 
-
-Maven Dependencies:
-
-Run mvn clean install from command line to ensure all dependencies are properly downloaded
-Check for any conflicts in the pom.xml file
-
-
-Deployment Issues:
-
-Clear Tomcat cache by deleting contents of the work directory in Tomcat installation
-Restart Tomcat and try deploying again
-
-
-
-Technical Support
-For additional assistance, please contact the development team at support@shopeasy.com
-Development Notes
-
-This is a Maven-based project. All dependencies are managed in the pom.xml file
-The application uses JSP for the view layer, servlets for controllers, and Java beans for models
-Database interactions are handled through JDBC with connection pooling for efficiency
-Front-end uses Bootstrap for responsive design and jQuery for enhanced user experience
-
-
-© 2025 ShopEasy. All rights reserved.
+© 2025 ShopEasy. All rights reserved. 🛍️
