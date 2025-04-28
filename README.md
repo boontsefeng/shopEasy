@@ -25,7 +25,7 @@
 #### Option B: Using MySQL Server
 1. Install MySQL Server from [https://dev.mysql.com/downloads/](https://dev.mysql.com/downloads/)
 2. Create a new database named `shopeasy`
-3. Import the provided SQL file (`database/shopeasy.sql`)
+3. Import the provided SQL file (`shopeasy.sql`)
 
 ### 2️⃣ Setting up Apache Tomcat 10
 1. Download Apache Tomcat 10 from [https://tomcat.apache.org/download-10.cgi](https://tomcat.apache.org/download-10.cgi)
