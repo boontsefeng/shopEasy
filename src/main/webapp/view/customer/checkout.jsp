@@ -1,5 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ include file="/view/customer/font.jsp" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -141,7 +142,7 @@
                                             <p class="text-sm font-medium text-gray-900">${item.productName}</p>
                                             <div class="flex justify-between mt-1">
                                                 <p class="text-sm text-gray-500">Qty: ${item.quantity}</p>
-                                                <p class="text-sm font-medium text-gray-900">RM${item.totalPrice}</p>
+                                                <p class="text-sm font-medium text-gray-900">RM<fmt:formatNumber value="${item.totalPrice}" pattern="#,##0.00" /></p>
                                             </div>
                                         </div>
                                     </div>
@@ -151,19 +152,19 @@
                             <div class="border-t border-gray-200 pt-4">
                                 <div class="flex justify-between mb-2">
                                     <span class="text-gray-600">Subtotal</span>
-                                    <span class="font-medium text-gray-900">RM${cartTotal}</span>
+                                    <span class="font-medium text-gray-900">RM<fmt:formatNumber value="${cartTotal}" pattern="#,##0.00" /></span>
                                 </div>
                                 <div class="flex justify-between mb-2">
                                     <span class="text-gray-600">Shipping</span>
                                     <span class="font-medium text-gray-900">FREE</span>
                                 </div>
                                 <div class="flex justify-between mb-2">
-                                    <span class="text-gray-600">Tax</span>
-                                    <span class="font-medium text-gray-900">Included</span>
+                                    <span class="text-gray-600">Tax (6% GST)</span>
+                                    <span class="font-medium text-gray-900">RM<fmt:formatNumber value="${cartTotal * 0.06}" pattern="#,##0.00" /></span>
                                 </div>
                                 <div class="flex justify-between font-bold text-lg mt-4 pt-4 border-t border-gray-200">
                                     <span>Total</span>
-                                    <span class="text-indigo-600">RM${cartTotal}</span>
+                                    <span class="text-indigo-600">RM<fmt:formatNumber value="${cartTotal * 1.06}" pattern="#,##0.00" /></span>
                                 </div>
                             </div>
                             
@@ -243,4 +244,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

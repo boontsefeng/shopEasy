@@ -12,6 +12,15 @@
     <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
+         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body, html {
+            font-family: 'Poppins', sans-serifa
+        }
+
+        * {
+            font-family: 'Poppins', sans-serif
+        }
         .error-container {
             background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }

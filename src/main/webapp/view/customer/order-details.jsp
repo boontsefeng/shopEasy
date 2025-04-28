@@ -141,7 +141,7 @@
                 <div class="text-gray-700">
                     <div class="flex justify-between mb-2">
                         <span>Subtotal:</span>
-                        <span>RM${order.totalAmount}</span>
+                        <span>RM<fmt:formatNumber value="${order.totalAmount}" pattern="#,##0.00"/></span>
                     </div>
                     <div class="flex justify-between mb-2">
                         <span>Shipping:</span>
@@ -149,11 +149,11 @@
                     </div>
                     <div class="flex justify-between mb-2">
                         <span>Tax:</span>
-                        <span>Included</span>
+                        <span class="font-medium text-gray-900">RM<fmt:formatNumber value="${order.totalAmount * 0.06}" pattern="#,##0.00" /></span>
                     </div>
                     <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2">
                         <span>Total:</span>
-                        <span class="text-indigo-600">RM${order.totalAmount}</span>
+                        <span class="text-indigo-600">RM<fmt:formatNumber value="${order.totalAmount}" pattern="#,##0.00"/></span>
                     </div>
                 </div>
             </div>
@@ -199,13 +199,13 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">RM${item.price}</div>
+                                    <div class="text-sm text-gray-900">RM<fmt:formatNumber value="${item.price}" pattern="#,##0.00"/></div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">${item.quantity}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">RM${item.totalPrice}</div>
+                                    <div class="text-sm font-medium text-gray-900">RM<fmt:formatNumber value="${item.totalPrice}" pattern="#,##0.00"/></div>
                                 </td>
                             </tr>
                         </c:forEach>

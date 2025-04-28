@@ -483,8 +483,8 @@ public class CustomerController extends HttpServlet {
                     // Since we're showing discounted prices in the UI but need to store original in cart
                     // If this is a discounted product, we need to restore the original price before adding to cart
                     if (discountedProductIds.contains(productId)) {
-                        // The price from DB is the original price, nothing to adjust here
-                        // The UI discount is applied at display time only
+                       product.setPrice(product.getPrice()* 0.5);
+                       productDAO.updateProductPrice(productId,product.getPrice());
                     }
                     
                     Cart cart = new Cart(user.getUserId(), productId, quantity);

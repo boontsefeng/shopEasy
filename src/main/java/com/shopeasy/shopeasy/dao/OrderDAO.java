@@ -48,7 +48,10 @@ public class OrderDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setInt(1, order.getUserId());
             stmt.setTimestamp(2, new Timestamp(order.getOrderDate().getTime()));
-            stmt.setBigDecimal(3, java.math.BigDecimal.valueOf(order.getTotalAmount()));
+            
+            //Set Tax Inclusive Amount
+            double taxInclusiveAmount = order.getTotalAmount() * 1.06;
+            stmt.setBigDecimal(3, java.math.BigDecimal.valueOf(taxInclusiveAmount));
             stmt.setString(4, order.getShippingAddress());
             
             // Map the status from our app to the database enum values
@@ -422,7 +425,7 @@ public class OrderDAO {
                 break;
             case "credit":
             case "debit":
-                appPaymentMethod = "Card on Delivery";
+                appPaymentMethod = "Credit/Debit Card";
                 break;
             case "e-wallet":
                 appPaymentMethod = "UPI Payment";

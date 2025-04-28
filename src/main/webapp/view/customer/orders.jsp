@@ -70,7 +70,7 @@
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="text-sm font-medium text-gray-900">RM${order.totalAmount}</span>
+                                            <span>RM<fmt:formatNumber value="${order.totalAmount}" pattern="#,##0.00"/></span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <c:choose>
