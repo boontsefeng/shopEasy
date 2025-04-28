@@ -3,8 +3,6 @@
 ## 📋 Overview
 **ShopEasy** is a comprehensive e-commerce web application built with JSP, MySQL, and Apache Tomcat 10. This Maven-based project provides a complete shopping experience with user and admin interfaces, product management, cart functionality, order processing, and more.
 
-![ShopEasy Banner](https://placeholder.pics/svg/1200x300/FFD700-FFB900/000000/SHOPEASY%20-%20SHOP%20WITH%20EASE)
-
 ## ✅ Prerequisites
 - 🔸 JDK 11 or higher
 - 🔸 Apache Tomcat 10
