@@ -130,7 +130,7 @@
                         <span class="font-medium">Method:</span> ${order.paymentMethod}
                     </p>
                     <p class="mb-1">
-                        <span class="font-medium">Total:</span> RM${order.totalAmount}
+                        <span class="font-medium">Total:</span> <span>RM<fmt:formatNumber value="${order.totalAmount}" pattern="#,##0.00"/></span>
                     </p>
                 </div>
             </div>
@@ -141,7 +141,7 @@
                 <div class="text-gray-700">
                     <div class="flex justify-between mb-2">
                         <span>Subtotal:</span>
-                        <span>RM<fmt:formatNumber value="${order.totalAmount}" pattern="#,##0.00"/></span>
+                        <span>RM<fmt:formatNumber value="${order.totalAmount-(order.totalAmount * 0.06)}" pattern="#,##0.00"/></span>
                     </div>
                     <div class="flex justify-between mb-2">
                         <span>Shipping:</span>
