@@ -208,7 +208,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.category}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">$${product.price / 100}.00</div>
+                            <div class="text-sm text-gray-900">${product.price}.00</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <c:choose>
@@ -838,29 +838,35 @@
         modal.classList.remove('hidden');
     }
     
-    // Restock Modal
-    function openRestockModal(productId, productName, currentQuantity) {
-        const modal = document.getElementById('restockModal');
-        const productNameSpan = document.getElementById('restockProductName');
-        const productIdInput = document.getElementById('restockProductId');
-        const currentStockInput = document.getElementById('currentStock');
-        const addStockInput = document.getElementById('addStock');
-        const newStockInput = document.getElementById('newStock');
-        
-        productNameSpan.textContent = productName;
-        productIdInput.value = productId;
-        currentStockInput.value = currentQuantity;
-        addStockInput.value = 1;
-        newStockInput.value = currentQuantity + 1;
-        
-        // Update new stock when add stock changes
-        addStockInput.addEventListener('input', function() {
-            const addValue = parseInt(this.value) || 0;
-            newStockInput.value = currentQuantity + addValue;
-        });
-        
-        modal.classList.remove('hidden');
-    }
+        function openRestockModal(productId, productName, currentQuantity) {
+            const modal = document.getElementById('restockModal');
+            const productNameSpan = document.getElementById('restockProductName');
+            const productIdInput = document.getElementById('restockProductId');
+            const currentStockInput = document.getElementById('currentStock');
+            const addStockInput = document.getElementById('addStock');
+            const newStockInput = document.getElementById('newStock');
+
+            // Convert currentQuantity to integer
+            currentQuantity = parseInt(currentQuantity) || 0;
+
+            productNameSpan.textContent = productName;
+            productIdInput.value = productId;
+            currentStockInput.value = currentQuantity;
+            addStockInput.value = 1;
+            newStockInput.value = currentQuantity + 1;
+
+            // Remove any existing event listeners to prevent duplicates
+            const newAddStockInput = addStockInput.cloneNode(true);
+            addStockInput.parentNode.replaceChild(newAddStockInput, addStockInput);
+
+            // Update new stock when add stock changes
+            newAddStockInput.addEventListener('input', function() {
+                const addValue = parseInt(this.value) || 0;
+                newStockInput.value = currentQuantity + addValue;
+            });
+
+            modal.classList.remove('hidden');
+        }
     
     // Quick Edit Modal
     function openQuickEditModal(productId, productName, category, price, quantity) {

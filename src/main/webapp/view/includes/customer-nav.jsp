@@ -31,7 +31,7 @@
                 </a>
                 <a href="${pageContext.request.contextPath}/customer/raya-discounts" class="text-gray-600 hover:text-indigo-600 transition relative group">
                     <i class="fas fa-tag mr-1"></i> Raya Deals
-                    <span class="absolute -top-2 -right-5 bg-red-500 text-white text-xs rounded-full h-5 w-10 flex items-center justify-center animate-pulse">
+                    <span class="absolute -top-2 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-10 flex items-center justify-center animate-pulse">
                         50%
                     </span>
                 </a>

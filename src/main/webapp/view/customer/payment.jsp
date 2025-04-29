@@ -145,7 +145,7 @@
                                                 class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                                 placeholder="345"
                                                 pattern="[0-9]+"
-                                                maxlength="4"
+                                                maxlength="3"
                                                 required>
                                             <div class="check-mark absolute right-3 top-1/2 transform -translate-y-1/2 hidden" id="cvvCheck">
                                                 <i class="fas fa-check"></i>
@@ -212,121 +212,155 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Payment page loaded");
-            
-            const cardNumberInput = document.getElementById('cardNumber');
-            const expiryDateInput = document.getElementById('expiryDate');
-            const cvvInput = document.getElementById('cvv');
-            const nameOnCardInput = document.getElementById('nameOnCard');
-            const cardIcon = document.getElementById('cardIcon');
-            const expiryCheck = document.getElementById('expiryCheck');
-            const cvvCheck = document.getElementById('cvvCheck');
-            const nameCheck = document.getElementById('nameCheck');
-            const shippingAddressInput = document.getElementById('shippingAddress');
-            
-            console.log("Current shipping address:", shippingAddressInput.value);
-            
-            // If shipping address is not set in the form, try to get it from session storage
-            if (!shippingAddressInput.value) {
-                const savedAddress = sessionStorage.getItem('shippingAddress');
-                if (savedAddress) {
-                    console.log("Got shipping address from session storage:", savedAddress);
-                    shippingAddressInput.value = savedAddress;
-                } else {
-                    console.log("No shipping address found in session storage");
-                }
+    console.log("Payment page loaded");
+    
+    const cardNumberInput = document.getElementById('cardNumber');
+    const expiryDateInput = document.getElementById('expiryDate');
+    const cvvInput = document.getElementById('cvv');
+    const nameOnCardInput = document.getElementById('nameOnCard');
+    const cardIcon = document.getElementById('cardIcon');
+    const expiryCheck = document.getElementById('expiryCheck');
+    const cvvCheck = document.getElementById('cvvCheck');
+    const nameCheck = document.getElementById('nameCheck');
+    const shippingAddressInput = document.getElementById('shippingAddress');
+    
+    console.log("Current shipping address:", shippingAddressInput.value);
+    
+    // If shipping address is not set in the form, try to get it from session storage
+    if (!shippingAddressInput.value) {
+        const savedAddress = sessionStorage.getItem('shippingAddress');
+        if (savedAddress) {
+            console.log("Got shipping address from session storage:", savedAddress);
+            shippingAddressInput.value = savedAddress;
+        } else {
+            console.log("No shipping address found in session storage");
+        }
+    }
+    
+    // Format card number with spaces
+    cardNumberInput.addEventListener('input', function(e) {
+        let value = this.value.replace(/\D/g, '');
+        let formattedValue = '';
+        
+        for (let i = 0; i < value.length; i++) {
+            if (i > 0 && i % 4 === 0) {
+                formattedValue += ' ';
             }
-            
-            // Demo test value for card number if needed
-            // Uncomment for testing
-            // cardNumberInput.value = "5555 5555 5555 4444";
-            // expiryDateInput.value = "12/25";
-            // cvvInput.value = "123";
-            // nameOnCardInput.value = "Test User";
-            
-            // Format card number with spaces
-            cardNumberInput.addEventListener('input', function(e) {
-                let value = this.value.replace(/\D/g, '');
-                let formattedValue = '';
-                
-                for (let i = 0; i < value.length; i++) {
-                    if (i > 0 && i % 4 === 0) {
-                        formattedValue += ' ';
-                    }
-                    formattedValue += value[i];
-                }
-                
-                this.value = formattedValue;
-                
-                // Change card icon based on card type
-                if (value.startsWith('4')) {
-                    cardIcon.innerHTML = '<span class="card-brand visa"></span>';
-                } else if (value.startsWith('5')) {
-                    cardIcon.innerHTML = '<span class="card-brand mastercard"></span>';
-                } else if (value.startsWith('3')) {
-                    cardIcon.innerHTML = '<span class="card-brand amex"></span>';
-                } else if (value.startsWith('6')) {
-                    cardIcon.innerHTML = '<span class="card-brand maestro"></span>';
-                } else {
-                    cardIcon.innerHTML = '<i class="fa-regular fa-credit-card text-gray-400"></i>';
-                }
-            });
-            
-            // Format expiry date MM/YY
-            expiryDateInput.addEventListener('input', function(e) {
-                let value = this.value.replace(/\D/g, '');
-                
-                if (value.length > 2) {
-                    this.value = value.substring(0, 2) + '/' + value.substring(2);
-                } else {
-                    this.value = value;
-                }
-                
-                // Show check mark if valid
-                if (/^(0[1-9]|1[0-2])\/([0-9]{2})$/.test(this.value)) {
-                    expiryCheck.classList.remove('hidden');
-                } else {
-                    expiryCheck.classList.add('hidden');
-                }
-            });
-            
-            // Show check mark for CVV when valid
-            cvvInput.addEventListener('input', function() {
-                if (this.value.length >= 3 && /^\d+$/.test(this.value)) {
-                    cvvCheck.classList.remove('hidden');
-                } else {
-                    cvvCheck.classList.add('hidden');
-                }
-            });
-            
-            // Show check mark for name when valid
-            nameOnCardInput.addEventListener('input', function() {
-                if (this.value.length > 3 && /^[A-Za-z\s]+$/.test(this.value)) {
-                    nameCheck.classList.remove('hidden');
-                } else {
-                    nameCheck.classList.add('hidden');
-                }
-            });
-            
-            // Form submission
-            document.getElementById('paymentForm').addEventListener('submit', function(e) {
-                // For demo purposes, we're accepting any valid-looking input
-                // In a real implementation, you would validate through a payment gateway
-                
-                console.log("Payment form submitted");
-                
-                // Save shipping address in session storage
-                if (shippingAddressInput.value) {
-                    console.log("Saving shipping address to session storage:", shippingAddressInput.value);
-                    sessionStorage.setItem('shippingAddress', shippingAddressInput.value);
-                } else {
-                    console.error("No shipping address to save!");
-                    e.preventDefault();
-                    alert("Please go back and enter a shipping address before proceeding.");
-                    return false;
-                }
-            });
-        });
+            formattedValue += value[i];
+        }
+        
+        this.value = formattedValue;
+        
+        // Change card icon based on card type
+        if (value.startsWith('4')) {
+            cardIcon.innerHTML = '<span class="card-brand visa"></span>';
+        } else if (value.startsWith('5')) {
+            cardIcon.innerHTML = '<span class="card-brand mastercard"></span>';
+        } else if (value.startsWith('3')) {
+            cardIcon.innerHTML = '<span class="card-brand amex"></span>';
+        } else if (value.startsWith('6')) {
+            cardIcon.innerHTML = '<span class="card-brand maestro"></span>';
+        } else {
+            cardIcon.innerHTML = '<i class="fa-regular fa-credit-card text-gray-400"></i>';
+        }
+    });
+    
+    // Format expiry date MM/YY
+    expiryDateInput.addEventListener('input', function(e) {
+        let value = this.value.replace(/\D/g, '');
+        
+        if (value.length > 2) {
+            this.value = value.substring(0, 2) + '/' + value.substring(2);
+        } else {
+            this.value = value;
+        }
+        
+        // Call validation function on input
+        validateExpiryDate();
+    });
+    
+    // Validate expiry date function
+    function validateExpiryDate() {
+        const expiryValue = expiryDateInput.value;
+        
+        // Check if we have MM/YY format
+        if (!/^\d{2}\/\d{2}$/.test(expiryValue)) {
+            expiryCheck.classList.add('hidden');
+            return false;
+        }
+        
+        const [month, year] = expiryValue.split('/');
+        
+        // Validate month is between 1 and 12
+        const monthNum = parseInt(month, 10);
+        if (monthNum < 1 || monthNum > 12) {
+            expiryCheck.classList.add('hidden');
+            return false;
+        }
+        
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear() % 100; // Get last 2 digits
+        const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+        
+        const expiryYear = parseInt(year, 10);
+        
+        // Check if the card is expired
+        if (expiryYear < currentYear || (expiryYear === currentYear && monthNum < currentMonth)) {
+            expiryCheck.classList.add('hidden');
+            return false;
+        }
+        
+        // Card is valid and not expired
+        expiryCheck.classList.remove('hidden');
+        return true;
+    }
+    
+    // Show check mark for CVV when valid
+    cvvInput.addEventListener('input', function() {
+        if (this.value.length >= 3 && /^\d+$/.test(this.value)) {
+            cvvCheck.classList.remove('hidden');
+        } else {
+            cvvCheck.classList.add('hidden');
+        }
+    });
+    
+    // Show check mark for name when valid
+    nameOnCardInput.addEventListener('input', function() {
+        if (this.value.length > 3 && /^[A-Za-z\s]+$/.test(this.value)) {
+            nameCheck.classList.remove('hidden');
+        } else {
+            nameCheck.classList.add('hidden');
+        }
+    });
+    
+    // Form submission with expiry date validation
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        // Validate expiry date before submission
+        if (!validateExpiryDate()) {
+            e.preventDefault();
+            alert('Please enter a valid expiry date. The card appears to be expired.');
+            return false;
+        }
+        
+        console.log("Payment form submitted");
+        
+        // Save shipping address in session storage
+        if (shippingAddressInput.value) {
+            console.log("Saving shipping address to session storage:", shippingAddressInput.value);
+            sessionStorage.setItem('shippingAddress', shippingAddressInput.value);
+        } else {
+            console.error("No shipping address to save!");
+            e.preventDefault();
+            alert("Please go back and enter a shipping address before proceeding.");
+            return false;
+        }
+    });
+    
+    // Initial validation on page load if value exists
+    if (expiryDateInput.value) {
+        validateExpiryDate();
+    }
+});
     </script>
 </body>
 </html> 

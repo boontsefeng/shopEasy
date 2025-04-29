@@ -141,7 +141,7 @@
                 <div class="text-gray-700">
                     <div class="flex justify-between mb-2">
                         <span>Subtotal:</span>
-                        <span>RM<fmt:formatNumber value="${order.totalAmount-(order.totalAmount * 0.06)}" pattern="#,##0.00"/></span>
+                        <span>RM<fmt:formatNumber value="${order.totalAmount / 1.06}" pattern="#,##0.00"/></span>
                     </div>
                     <div class="flex justify-between mb-2">
                         <span>Shipping:</span>
@@ -149,7 +149,7 @@
                     </div>
                     <div class="flex justify-between mb-2">
                         <span>Tax:</span>
-                        <span class="font-medium text-gray-900">RM<fmt:formatNumber value="${order.totalAmount * 0.06}" pattern="#,##0.00" /></span>
+                        <span class="font-medium text-gray-900">RM<fmt:formatNumber value="${order.totalAmount-(order.totalAmount / 1.06)}" pattern="#,##0.00" /></span>
                     </div>
                     <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2">
                         <span>Total:</span>

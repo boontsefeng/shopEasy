@@ -71,7 +71,7 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span>RM<fmt:formatNumber value="${order.totalAmount}" pattern="#,##0.00"/></span>
-                                        </td>
+                                          </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <c:choose>
                                                 <c:when test="${order.status eq 'Pending'}">

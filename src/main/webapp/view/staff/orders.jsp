@@ -668,3 +668,470 @@
         </div>
     </div>
 </div>
+
+<script>
+// Define filtering variables
+let currentPage = 1;
+const itemsPerPage = 10;
+let filteredOrders = [];
+
+// Filter orders based on selected criteria
+function filterOrders() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    const searchTerm = document.getElementById('searchOrder').value.toLowerCase().trim();
+    
+    console.log('Filtering orders with:', { status: statusFilter, date: dateFilter, search: searchTerm });
+    
+    // Get all order rows
+    const allRows = Array.from(document.querySelectorAll('#ordersTableBody tr[data-order-id]'));
+    
+    // Debug log all available statuses in the table
+    const availableStatuses = new Set();
+    allRows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        if (status) availableStatuses.add(status);
+    });
+    console.log('Available statuses in table:', Array.from(availableStatuses));
+    
+    // If no filters are active and no search term, show all rows
+    if (statusFilter === 'all' && dateFilter === 'all' && !searchTerm) {
+        filteredOrders = allRows;
+        updatePagination(1);
+        return;
+    }
+    
+    // Apply filters
+    filteredOrders = allRows.filter(row => {
+        let matchesStatus = true;
+        let matchesDate = true;
+        let matchesSearch = true;
+        
+        // Status filter
+        if (statusFilter !== 'all') {
+            // Get status from the row's data attribute
+            const rowStatus = row.getAttribute('data-status');
+            
+            // Get status from the badge element as fallback
+            let badgeStatus = null;
+            const statusBadge = row.querySelector('.status-badge');
+            if (statusBadge) {
+                // Extract class that starts with 'status-' but isn't 'status-badge'
+                const statusClasses = Array.from(statusBadge.classList).filter(cls => 
+                    cls.startsWith('status-') && cls !== 'status-badge'
+                );
+                
+                if (statusClasses.length > 0) {
+                    // Extract actual status from class name (remove 'status-' prefix)
+                    badgeStatus = statusClasses[0].replace('status-', '');
+                }
+            }
+            
+            // Use row status if available, otherwise fallback to badge status
+            const effectiveStatus = rowStatus || badgeStatus;
+            console.log(`Row ${row.getAttribute('data-order-id')} status: ${effectiveStatus}, filter: ${statusFilter}`);
+            
+            // Check if status matches filter
+            matchesStatus = effectiveStatus === statusFilter;
+        }
+        
+        // Date filter
+        if (dateFilter !== 'all') {
+            const dateCell = row.querySelector('td:nth-child(3) .text-sm');
+            if (dateCell) {
+                const orderDateStr = dateCell.textContent.trim();
+                const orderDate = new Date(orderDateStr);
+                const now = new Date();
+                
+                // Date filtering logic
+                if (dateFilter === 'today') {
+                    // Check if same day
+                    matchesDate = orderDate.toDateString() === now.toDateString();
+                } else if (dateFilter === 'week') {
+                    // Check if within the last 7 days
+                    const oneWeekAgo = new Date(now);
+                    oneWeekAgo.setDate(now.getDate() - 7);
+                    matchesDate = orderDate >= oneWeekAgo;
+                } else if (dateFilter === 'month') {
+                    // Check if same month and year
+                    matchesDate = 
+                        orderDate.getMonth() === now.getMonth() && 
+                        orderDate.getFullYear() === now.getFullYear();
+                }
+            }
+        }
+        
+        // Search term filter
+        if (searchTerm) {
+            // Search in order ID
+            const orderId = row.getAttribute('data-order-id');
+            
+            // Search in customer name and email
+            const customerCell = row.querySelector('td:nth-child(2)');
+            const customerName = customerCell ? customerCell.querySelector('.text-gray-900').textContent.toLowerCase() : '';
+            const customerEmail = customerCell ? customerCell.querySelector('.text-gray-500').textContent.toLowerCase() : '';
+            
+            // Combined search
+            matchesSearch = 
+                orderId.includes(searchTerm) || 
+                customerName.includes(searchTerm) || 
+                customerEmail.includes(searchTerm);
+        }
+        
+        // Order must match all active filters
+        return matchesStatus && matchesDate && matchesSearch;
+    });
+    
+    // Reset to first page when filtering
+    updatePagination(1);
+}
+
+// Update pagination display and control visibility of rows
+function updatePagination(page) {
+    // Save current page
+    currentPage = page;
+    
+    // Calculate indices
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, filteredOrders.length);
+    
+    // Hide all rows first
+    const allRows = document.querySelectorAll('#ordersTableBody tr[data-order-id]');
+    allRows.forEach(row => {
+        row.style.display = 'none';
+    });
+    
+    // Show filtered rows for current page
+    for (let i = startIndex; i < endIndex; i++) {
+        if (filteredOrders[i]) {
+            filteredOrders[i].style.display = '';
+        }
+    }
+    
+    // Handle empty results
+    const noOrdersRow = document.getElementById('noOrdersRow');
+    if (filteredOrders.length === 0) {
+        // If no orders row doesn't exist, create it
+        if (!noOrdersRow) {
+            const tbody = document.getElementById('ordersTableBody');
+            const newRow = document.createElement('tr');
+            newRow.id = 'noOrdersRow';
+            newRow.innerHTML = `
+                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
+                    No orders match your filter criteria
+                </td>
+            `;
+            tbody.appendChild(newRow);
+        } else {
+            noOrdersRow.style.display = '';
+        }
+    } else if (noOrdersRow) {
+        // Hide the no orders row if we have results
+        noOrdersRow.style.display = 'none';
+    }
+    
+    // Update pagination text
+    document.getElementById('startCount').textContent = filteredOrders.length > 0 ? startIndex + 1 : 0;
+    document.getElementById('endCount').textContent = endIndex;
+    document.getElementById('totalCount').textContent = filteredOrders.length;
+    
+    // Update button states
+    const prevButton = document.querySelector('.pagination-prev');
+    const nextButton = document.querySelector('.pagination-next');
+    
+    if (prevButton) {
+        prevButton.disabled = page <= 1;
+        prevButton.classList.toggle('opacity-50', page <= 1);
+    }
+    
+    if (nextButton) {
+        nextButton.disabled = endIndex >= filteredOrders.length;
+        nextButton.classList.toggle('opacity-50', endIndex >= filteredOrders.length);
+    }
+}
+
+// Handle previous page button
+function goToPrevPage() {
+    if (currentPage > 1) {
+        updatePagination(currentPage - 1);
+    }
+}
+
+// Handle next page button
+function goToNextPage() {
+    const maxPage = Math.ceil(filteredOrders.length / itemsPerPage);
+    if (currentPage < maxPage) {
+        updatePagination(currentPage + 1);
+    }
+}
+
+// Initialize filtering and pagination when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup pagination buttons
+    const prevButton = document.querySelector('.flex.space-x-2 button:first-child');
+    const nextButton = document.querySelector('.flex.space-x-2 button:last-child');
+    
+    if (prevButton) {
+        prevButton.classList.add('pagination-prev');
+        prevButton.addEventListener('click', goToPrevPage);
+    }
+    
+    if (nextButton) {
+        nextButton.classList.add('pagination-next');
+        nextButton.addEventListener('click', goToNextPage);
+    }
+    
+    // Ensure all status dropdowns have proper event listeners
+    document.querySelectorAll('.status-dropdown').forEach(function(dropdown) {
+        dropdown.addEventListener('change', function() {
+            const orderId = this.getAttribute('data-order-id');
+            const status = this.value;
+            if (orderId && status) {
+                updateOrderStatus(orderId, status);
+            }
+        });
+    });
+    
+    // Filter events
+    if (document.getElementById('statusFilter')) {
+        document.getElementById('statusFilter').addEventListener('change', filterOrders);
+    }
+    if (document.getElementById('dateFilter')) {
+        document.getElementById('dateFilter').addEventListener('change', filterOrders);
+    }
+    if (document.getElementById('searchOrder')) {
+        document.getElementById('searchOrder').addEventListener('input', filterOrders);
+    }
+    
+    // Initialize with all orders
+    const allRows = Array.from(document.querySelectorAll('#ordersTableBody tr[data-order-id]'));
+    filteredOrders = allRows;
+    updatePagination(1);
+    
+    // Set up a MutationObserver to handle dynamic updates to the order table
+    const tableObserver = new MutationObserver(function(mutations) {
+        // Re-apply current filters when table content changes
+        filterOrders();
+    });
+    
+    const orderTableBody = document.getElementById('ordersTableBody');
+    if (orderTableBody) {
+        tableObserver.observe(orderTableBody, { childList: true, subtree: true });
+    }
+    
+    // Debug function to print all status values in the table
+function debugStatusValues() {
+  const rows = document.querySelectorAll('#ordersTableBody tr[data-order-id]');
+  console.log('---- STATUS DEBUG ----');
+  
+  // Create a map to count occurrences of each status
+  const statusMap = {};
+  
+  rows.forEach(row => {
+    // Get the status from data attribute
+    const dataStatus = row.getAttribute('data-status');
+    
+    // Get the status from the badge class
+    const statusBadge = row.querySelector('.status-badge');
+    let badgeClass = null;
+    if (statusBadge) {
+      const classList = Array.from(statusBadge.classList);
+      badgeClass = classList.find(cls => cls.startsWith('status-') && cls !== 'status-badge');
+      if (badgeClass) badgeClass = badgeClass.replace('status-', '');
+    }
+    
+    // Get the status from the text content
+    const statusText = statusBadge ? statusBadge.textContent.trim().toLowerCase() : null;
+    
+    console.log(`Order #${row.getAttribute('data-order-id')}: data-status="${dataStatus}", badge-class="${badgeClass}", text="${statusText}"`);
+    
+    // Count occurrences
+    if (dataStatus) {
+      statusMap[dataStatus] = (statusMap[dataStatus] || 0) + 1;
+    }
+  });
+  
+  console.log('Status counts:', statusMap);
+  console.log('---- END DEBUG ----');
+}
+
+// Fixed filter function
+function filterOrders() {
+  debugStatusValues(); // Add this line to debug
+  
+  const statusFilter = document.getElementById('statusFilter').value;
+  const dateFilter = document.getElementById('dateFilter').value;
+  const searchTerm = document.getElementById('searchOrder').value.toLowerCase().trim();
+  
+  console.log('Filtering with:', { status: statusFilter, date: dateFilter, search: searchTerm });
+  
+  // Get all order rows
+  const allRows = Array.from(document.querySelectorAll('#ordersTableBody tr[data-order-id]'));
+  
+  // If no filters are active and no search term, show all rows
+  if (statusFilter === 'all' && dateFilter === 'all' && !searchTerm) {
+    filteredOrders = allRows;
+    updatePagination(1);
+    return;
+  }
+  
+  // Apply filters
+  filteredOrders = allRows.filter(row => {
+    let matchesStatus = true;
+    let matchesDate = true;
+    let matchesSearch = true;
+    
+    // Status filter - FIXED to be case insensitive and handle multiple status indicators
+    if (statusFilter !== 'all') {
+      // Try multiple ways to get the status
+      const dataStatus = row.getAttribute('data-status')?.toLowerCase();
+      
+      // Get badge class as fallback
+      let badgeStatus = null;
+      const statusBadge = row.querySelector('.status-badge');
+      if (statusBadge) {
+        const statusClasses = Array.from(statusBadge.classList).filter(cls => 
+          cls.startsWith('status-') && cls !== 'status-badge'
+        );
+        
+        if (statusClasses.length > 0) {
+          badgeStatus = statusClasses[0].replace('status-', '').toLowerCase();
+        }
+      }
+      
+      // Get text content as another fallback
+      const statusText = statusBadge ? 
+        statusBadge.textContent.trim().toLowerCase() : null;
+      
+      // Normalize status values for comparison
+      // This handles cases like "Delivered" vs "delivered" or "Packaging" vs "packaging"
+      const normalizedFilterStatus = statusFilter.toLowerCase();
+      
+      // Check all possible status indicators
+      matchesStatus = (dataStatus === normalizedFilterStatus) || 
+                      (badgeStatus === normalizedFilterStatus) ||
+                      (statusText === normalizedFilterStatus) ||
+                      // Handle special cases like "pending" might be stored as "packaging"
+                      (normalizedFilterStatus === 'packaging' && statusText === 'pending') ||
+                      (normalizedFilterStatus === 'shipping' && statusText === 'processing') ||
+                      (normalizedFilterStatus === 'delivery' && statusText === 'shipped');
+      
+      console.log(`Row ${row.getAttribute('data-order-id')} status check: data="${dataStatus}", badge="${badgeStatus}", text="${statusText}", filter="${normalizedFilterStatus}", matches=${matchesStatus}`);
+    }
+    
+    // Date filter (unchanged)
+    if (dateFilter !== 'all') {
+      const dateCell = row.querySelector('td:nth-child(3) .text-sm');
+      if (dateCell) {
+        const orderDateStr = dateCell.textContent.trim();
+        const orderDate = new Date(orderDateStr);
+        const now = new Date();
+        
+        if (dateFilter === 'today') {
+          matchesDate = orderDate.toDateString() === now.toDateString();
+        } else if (dateFilter === 'week') {
+          const oneWeekAgo = new Date(now);
+          oneWeekAgo.setDate(now.getDate() - 7);
+          matchesDate = orderDate >= oneWeekAgo;
+        } else if (dateFilter === 'month') {
+          matchesDate = 
+            orderDate.getMonth() === now.getMonth() && 
+            orderDate.getFullYear() === now.getFullYear();
+        }
+      }
+    }
+    
+    // Search term filter (unchanged)
+    if (searchTerm) {
+      const orderId = row.getAttribute('data-order-id');
+      const customerCell = row.querySelector('td:nth-child(2)');
+      const customerName = customerCell ? customerCell.querySelector('.text-gray-900').textContent.toLowerCase() : '';
+      const customerEmail = customerCell ? customerCell.querySelector('.text-gray-500').textContent.toLowerCase() : '';
+      
+      matchesSearch = 
+        orderId.includes(searchTerm) || 
+        customerName.includes(searchTerm) || 
+        customerEmail.includes(searchTerm);
+    }
+    
+    return matchesStatus && matchesDate && matchesSearch;
+  });
+  
+  console.log(`Filter results: ${filteredOrders.length} matching rows`);
+  updatePagination(1);
+}
+
+// Function to fix the status dropdown
+function fixStatusDropdown() {
+  const statusDropdown = document.getElementById('statusFilter');
+  if (!statusDropdown) return;
+  
+  // Clear existing options
+  statusDropdown.innerHTML = '';
+  
+  // Add correct options
+  const options = [
+    { value: 'all', text: 'All' },
+    { value: 'packaging', text: 'Packaging (Pending)' },
+    { value: 'shipping', text: 'Shipping (Processing)' },
+    { value: 'delivery', text: 'Delivery (Shipped)' },
+    { value: 'delivered', text: 'Delivered' }
+  ];
+  
+  options.forEach(option => {
+    const optElement = document.createElement('option');
+    optElement.value = option.value;
+    optElement.textContent = option.text;
+    statusDropdown.appendChild(optElement);
+  });
+  
+  // Fix status classes on all badges
+  const allStatusBadges = document.querySelectorAll('.status-badge');
+  allStatusBadges.forEach(badge => {
+    // Get current status
+    const text = badge.textContent.trim().toLowerCase();
+    
+    // Remove all status classes
+    badge.classList.forEach(cls => {
+      if (cls.startsWith('status-') && cls !== 'status-badge') {
+        badge.classList.remove(cls);
+      }
+    });
+    
+    // Add correct class based on text
+    if (text === 'pending' || text === 'packaging') {
+      badge.classList.add('status-packaging');
+    } else if (text === 'processing' || text === 'shipping') {
+      badge.classList.add('status-shipping');
+    } else if (text === 'shipped' || text === 'delivery') {
+      badge.classList.add('status-delivery');
+    } else if (text === 'delivered') {
+      badge.classList.add('status-delivered');
+    }
+  });
+  
+  // Re-attach event listener
+  statusDropdown.addEventListener('change', filterOrders);
+}
+
+// Run when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  // Fix the status dropdown
+  fixStatusDropdown();
+  
+  // Re-attach event listeners for other filters
+  if (document.getElementById('dateFilter')) {
+    document.getElementById('dateFilter').addEventListener('change', filterOrders);
+  }
+  if (document.getElementById('searchOrder')) {
+    document.getElementById('searchOrder').addEventListener('input', filterOrders);
+  }
+  
+  // Debug current status values
+  debugStatusValues();
+  
+  // Initialize filtering
+  filterOrders();
+});
+});
+</script>
